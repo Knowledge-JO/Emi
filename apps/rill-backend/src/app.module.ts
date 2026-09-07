@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AppConfigModule } from './config/config.module';
 import { CommonModule } from './common/common.module';
 import { DatabaseModule } from './database/database.module';
+import { AiModule } from './modules/ai/ai.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { WalletModule } from './modules/wallet/wallet.module';
@@ -27,6 +28,7 @@ import { EventsModule } from './modules/events/events.module';
     AppConfigModule,
     CommonModule,
     DatabaseModule,
+    AiModule,
     EventsModule,
     UsersModule,
     AuthModule,

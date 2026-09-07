@@ -1,6 +1,50 @@
-import { Controller } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
-// TODO: POST /intents to submit a natural-language outcome; GET /intents/:id to read the goal
-// tree, capability graph and resolution status.
+import { AuthService } from '../auth/auth.service';
+import { CurrentPrincipal, PrivyAuthGuard } from '../auth/privy-auth.guard';
+import type { PrivyPrincipal } from '../auth/privy-identity.interface';
+import { CreateIntentDto } from './create-intent.dto';
+import { IntentService } from './intent.service';
+
 @Controller('intents')
-export class IntentController {}
+@UseGuards(PrivyAuthGuard)
+export class IntentController {
+  constructor(
+    private readonly auth: AuthService,
+    private readonly intents: IntentService,
+  ) {}
+
+  /** Submit a natural-language outcome. Returns the schema-validated intent object. */
+  @Post()
+  async create(
+    @CurrentPrincipal() principal: PrivyPrincipal,
+    @Body() body: CreateIntentDto,
+  ) {
+    const user = await this.auth.requireUser(principal);
+    return this.intents.createFromMessage(user.id, body.text.trim());
+  }
+
+  @Get(':id')
+  async get(
+    @CurrentPrincipal() principal: PrivyPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    const user = await this.auth.requireUser(principal);
+    const intent = await this.intents.getForUser(user.id, id);
+
+    if (!intent) {
+      throw new NotFoundException('Intent not found');
+    }
+
+    return intent;
+  }
+}

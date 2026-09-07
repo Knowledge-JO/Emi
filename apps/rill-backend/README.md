@@ -99,7 +99,8 @@ Copy the environment variables below into `.env`:
 | `X402_FACILITATOR_URL` | x402 payment facilitator |
 | `ERC8183_ESCROW_ADDRESS` | Job escrow contract |
 | `ERC8004_REGISTRY_ADDRESS` | Agent identity registry |
-| `OPENAI_API_KEY`, `PLANNER_MODEL` | Planner LLM |
+| `GEMINI_API_KEY`, `AI_PROVIDER`, `PLANNER_MODEL` | Chat model (Gemini via `@google/genai` by default) |
+| `AI_EMBEDDING_PROVIDER`, `EMBEDDING_MODEL` | Discovery embeddings (1536 dimensions) |
 
 Local services:
 
