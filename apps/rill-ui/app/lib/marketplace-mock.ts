@@ -53,6 +53,7 @@ export interface JobReceipt {
   quotedCost: string;
   gas: string;
   explorerUrl: string;
+  result?: SwapResult;
 }
 
 export type Intents = "venus-protect" | "swap-bnb-usdt" | "cake-liquidity";
@@ -76,6 +77,150 @@ export const SWAP_CLARIFYING = {
     { id: "5-0.5", amount: "5 BNB · 0.5% slippage" },
   ],
 };
+
+export interface SwapIntent {
+  amount: string | null;
+  from: string;
+  to: string;
+}
+
+export interface SwapResult {
+  out: string;
+  into: string;
+  rate: string;
+}
+
+const SWAP_TOKENS = /\b(usdt|usd|busd|bnb|cake)\b/;
+const USD_PRICE: Record<string, number> = { USDT: 1, BUSD: 1, BNB: 489, CAKE: 1.84 };
+
+function money(v: number): string {
+  return v < 0.1 ? `$${v.toFixed(3)}` : `$${v.toFixed(2)}`;
+}
+
+function qty(v: number, max = 4): string {
+  return v.toLocaleString("en-US", { maximumFractionDigits: max });
+}
+
+export function parseSwap(raw: string): SwapIntent | null {
+  const t = raw.toLowerCase();
+  if (!t.includes("swap")) return null;
+  const toks: string[] = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(SWAP_TOKENS.source, "g");
+  while ((m = re.exec(t))) toks.push(m[1].toUpperCase() === "USD" ? "USDT" : m[1].toUpperCase());
+  const from = toks[0] ?? "USDT";
+  const to = toks[1] ?? (from === "USDT" ? "BNB" : "USDT");
+  const amount = t.match(/\d+(?:\.\d+)?/)?.[0] ?? null;
+  return { amount, from, to };
+}
+
+function swapPlan(s: SwapIntent, amountLabel?: string): MarketPlan {
+  const amount = s.amount ?? amountLabel?.split(" · ")[0]?.match(/\d+(?:\.\d+)?/)?.[0] ?? "5";
+  const slippage = amountLabel?.match(/(\d+(?:\.\d+)?%)\s*slippage/)?.[1] ?? "0.5%";
+  const { from, to } = s;
+  const notional = parseFloat(amount) * (USD_PRICE[from] ?? 1);
+  const gas = 0.21;
+  const x402 = notional * 0.007;
+  const agent = notional * 0.004 + 0.05;
+
+  return {
+    id: "SWP-042",
+    intent: `Swap ${amount} ${from} for ${to}`,
+    agents: [
+      {
+        id: "pcs-router",
+        handle: "@pancake-router-v3",
+        protocol: "PancakeSwap",
+        role: "Routing",
+        reputation: 99.1,
+        jobsCompleted: 14200,
+        fee: "0.05%",
+        selected: true,
+        why: "Best locked route · 1.2% better than runner-up quote",
+      },
+      {
+        id: "thena-keeper",
+        handle: "@thena-liquidity-keeper",
+        protocol: "Thena",
+        role: "Routing",
+        reputation: 93.2,
+        jobsCompleted: 3400,
+        fee: "0.08%",
+        selected: false,
+        why: "Competing route quoted 0.08% vs 0.05% selected",
+      },
+    ],
+    actions: [
+      {
+        id: "a1",
+        label: "Quote best route",
+        agent: "@pancake-router-v3",
+        protocol: "PancakeSwap",
+        detail: `DEX pool scan · gas-aware routing for ${from} → ${to}`,
+      },
+      {
+        id: "a2",
+        label: `Swap ${amount} ${from} for ${to}`,
+        agent: "@pancake-router-v3",
+        protocol: "PancakeSwap",
+        detail: `Max slippage ${slippage}`,
+      },
+    ],
+    cost: {
+      quoted: money(gas + x402 + agent),
+      gas: money(gas),
+      x402Fee: money(x402),
+      agentCommission: money(agent),
+    },
+    permission: {
+      maxSpend: money(notional * 1.15),
+      expiry: "1 hour",
+      protocols: ["PancakeSwap"],
+      scope: "swapExactIn · permit2-permit",
+    },
+  };
+}
+
+export function swapQuestionFor(from: string, to: string): string {
+  return `Swap ${from} for ${to} - how much, and what max slippage will you accept?`;
+}
+
+export function swapChoicesFor(from: string): ClarifyingChoice[] {
+  if (from === "BNB") {
+    return [
+      { id: "0.5-1.5", amount: "0.5 BNB · 1.5% slippage" },
+      { id: "1.2-1.0", amount: "1.2 BNB · 1.0% slippage" },
+      { id: "5-0.5", amount: "5 BNB · 0.5% slippage" },
+    ];
+  }
+  if (from === "CAKE") {
+    return [
+      { id: "50-1.0", amount: "50 CAKE · 1.0% slippage" },
+      { id: "200-0.8", amount: "200 CAKE · 0.8% slippage" },
+      { id: "500-0.5", amount: "500 CAKE · 0.5% slippage" },
+    ];
+  }
+  return [
+    { id: "5-0.5", amount: "5 USDT · 0.5% slippage" },
+    { id: "50-1.0", amount: "50 USDT · 1.0% slippage" },
+    { id: "150-0.8", amount: "150 USDT · 0.8% slippage" },
+  ];
+}
+
+export function swapResultFor(raw: string): SwapResult | undefined {
+  const p = parseSwap(raw);
+  if (!p || !p.amount) return undefined;
+  const amt = parseFloat(p.amount);
+  const perFrom = USD_PRICE[p.from] ?? 1;
+  const totalUsd = amt * perFrom;
+  const perTo = USD_PRICE[p.to] ?? 1;
+  const into = totalUsd / perTo;
+  return {
+    out: `${qty(amt, 3)} ${p.from}`,
+    into: `${qty(into, 4)} ${p.to}`,
+    rate: `$${qty(perFrom, 2)}/${p.from}`,
+  };
+}
 
 const plans: Record<Intents, (amountLabel?: string) => MarketPlan> = {
   "venus-protect": () => ({
@@ -330,11 +475,23 @@ export function resolveIntent(raw: string): ResolvedIntent {
 }
 
 export function planFor(raw: string, amountLabel?: string): MarketPlan {
+  const swap = parseSwap(raw);
+  if (swap) return swapPlan(swap, amountLabel);
   const r = resolveIntent(raw);
   return plans[r.intentKey](amountLabel ?? r.amountLabel);
 }
 
 export function traceFor(raw: string): TraceStep[] {
+  const swap = parseSwap(raw);
+  if (swap) {
+    const p = swapPlan(swap);
+    return [
+      { id: "hire", label: "Agent hired", detail: "@pancake-router-v3 · 0.05% fee" },
+      { id: "key", label: "Session key granted", detail: `Altana scope swapExactIn · max ${p.permission.maxSpend} · 1 hour` },
+      { id: "route", label: "Best route locked", detail: `1.2% better than runner-up quote for ${swap.from} → ${swap.to}` },
+      { id: "tx", label: "Transaction submitted", detail: "waiting for confirmation" },
+    ];
+  }
   const { intentKey } = resolveIntent(raw);
   return traces[intentKey];
 }
@@ -344,6 +501,8 @@ export function isMonitoringIntent(raw: string): boolean {
 }
 
 export function shortLabelFor(raw: string): string {
+  const swap = parseSwap(raw);
+  if (swap) return `${swap.from} → ${swap.to} Swap`;
   switch (resolveIntent(raw).intentKey) {
     case "venus-protect":
       return "Venus Loan Guard";

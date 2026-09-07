@@ -11,10 +11,13 @@ import { WorkspaceHeader } from "../components/workspace-header";
 import { SessionDashboard, type LiveJob } from "../components/session-dashboard";
 import { CapabilityDirectory } from "../components/capability-directory";
 import {
-  SWAP_CLARIFYING,
+  parseSwap,
   planFor,
   traceFor,
   isMonitoringIntent,
+  swapQuestionFor,
+  swapChoicesFor,
+  swapResultFor,
   type MarketPlan,
   type JobReceipt,
 } from "../lib/marketplace-mock";
@@ -52,7 +55,8 @@ export default function AppHome() {
   const submitIntent = (text: string) => {
     setInput(text);
     setIntent(text);
-    if (/swap/i.test(text)) {
+    const swap = parseSwap(text);
+    if (swap && !swap.amount) {
       setView("clarify");
     } else {
       setPlan(planFor(text));
@@ -60,20 +64,26 @@ export default function AppHome() {
     }
   };
 
-  const handleClarify = (text: string) => {
-    setIntent(text);
-    setPlan(planFor(text));
+  const handleClarify = (choice: { id: string; amount: string }) => {
+    const swap = parseSwap(intent);
+    const amount = choice.amount.split(" · ")[0];
+    const to = swap?.to ?? "USDT";
+    const full = `Swap ${amount} for ${to}`;
+    setIntent(full);
+    setPlan(planFor(full, choice.amount));
     setView("plan");
   };
 
   const finalizeJob = (job: LiveJob) => {
     const txHash = randomTxHash();
+    const result = swapResultFor(job.intent);
     const receipt: JobReceipt = {
       txHash,
       actualCost: job.plan.cost.quoted,
       quotedCost: job.plan.cost.quoted,
       gas: job.plan.cost.gas,
       explorerUrl: `https://bscscan.com/tx/${txHash}`,
+      result,
     };
     setJobs((prev) =>
       prev.map((j) => (j.id === job.id ? { ...j, progress: j.steps.length, status: "done", receipt } : j))
@@ -165,6 +175,7 @@ export default function AppHome() {
   };
 
   const selectedJob = selectedId ? jobs.find((j) => j.id === selectedId) ?? null : null;
+  const swap = parseSwap(intent);
   const guards = jobs.filter((j) => j.status === "running");
   const done = jobs.filter((j) => j.status === "done");
 
@@ -215,11 +226,9 @@ export default function AppHome() {
                   <motion.div key="clarify" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <ClarifyingQuestion
                       intent={intent}
-                      question={SWAP_CLARIFYING.question}
-                      choices={SWAP_CLARIFYING.choices}
-                      onAnswer={(choice) =>
-                        handleClarify(`Swap ${choice.amount.split(" · ")[0]} for USDT (${choice.amount})`)
-                      }
+                      question={swapQuestionFor(swap?.from ?? "USDT", swap?.to ?? "BNB")}
+                      choices={swapChoicesFor(swap?.from ?? "USDT")}
+                      onAnswer={handleClarify}
                       onEdit={() => {}}
                       onBack={handleBack}
                     />

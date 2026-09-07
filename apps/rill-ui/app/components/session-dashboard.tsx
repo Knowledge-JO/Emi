@@ -206,6 +206,14 @@ function ReceiptBlock({ receipt, agent }: { receipt: JobReceipt; agent: string }
           <span className="text-sm font-semibold text-foreground">Executed · receipt</span>
         </div>
         <div className="space-y-2.5 text-sm">
+          {receipt.result && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-success/10 border border-success/25 px-3 py-2 -mx-1">
+              <span className="text-success text-xs font-semibold">Completed swap</span>
+              <span className="font-mono text-xs text-foreground font-medium">
+                {receipt.result.out} → {receipt.result.into}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted text-xs">Transaction</span>
             <span className="flex items-center gap-2">
@@ -240,6 +248,11 @@ function ReceiptBlock({ receipt, agent }: { receipt: JobReceipt; agent: string }
         <p className="text-[11px] text-muted mt-3 pt-3 border-t border-border/60">
           {agent} settled via x402 · ERC-8004 reputation crediting +2. Under-quote refund: {receipt.quotedCost} →{" "}
           {receipt.actualCost}.
+          {receipt.result ? ` Rate ${receipt.result.rate}.` : ""}
+        </p>
+        <p className="text-[11px] text-foreground/70 mt-2 flex items-center gap-1.5">
+          <CheckCircle size={12} className="text-success" />
+          Session closed · session key revoked · idle funds returned to vault
         </p>
       </div>
     </motion.div>

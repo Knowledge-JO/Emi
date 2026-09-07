@@ -13,6 +13,7 @@ import {
   Receipt,
   SealCheck,
   ArrowSquareOut,
+  TrendUp,
 } from "@phosphor-icons/react";
 import type { MarketPlan } from "../lib/marketplace-mock";
 
@@ -127,6 +128,17 @@ export function PlanCard({ plan, intent, onApprove, onBack }: PlanCardProps) {
                 <span className="text-[11px] text-muted">{selected.jobsCompleted.toLocaleString()} jobs done</span>
               </div>
               <p className="text-xs text-muted mt-2.5">{selected.why}</p>
+              {alternates.length > 0 && (
+                <div className="mt-2.5 pt-2.5 border-t border-border/60">
+                  <div className="flex items-center gap-2 text-[11px] text-muted">
+                    <TrendUp size={12} className="text-success shrink-0" />
+                    <span className="truncate">
+                      {selected.reputation.toFixed(1)}% rep vs {alternates[0].reputation.toFixed(1)}% · fee{" "}
+                      {selected.fee} vs {alternates[0].fee}
+                    </span>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Alternates: agent economy visible */}
