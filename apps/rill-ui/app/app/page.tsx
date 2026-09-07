@@ -1,108 +1,249 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { TopNav } from "../components/top-nav";
 import { OmniInput } from "../components/omn-input";
 import { SuggestionPills } from "../components/suggestion-pills";
-import { CompiledWorkflow } from "../components/compiled-workflow";
-import { LiveJobs, type LiveJob } from "../components/live-jobs";
-import { History, type HistoryEntry } from "../components/history";
+import { PlanCard } from "../components/plan-card";
+import { ClarifyingQuestion } from "../components/clarifying-question";
+import { Sidebar, type Network, type HistoryEntry } from "../components/sidebar";
+import { WorkspaceHeader } from "../components/workspace-header";
+import { SessionDashboard, type LiveJob } from "../components/session-dashboard";
+import { CapabilityDirectory } from "../components/capability-directory";
+import {
+  SWAP_CLARIFYING,
+  planFor,
+  traceFor,
+  isMonitoringIntent,
+  type MarketPlan,
+  type JobReceipt,
+} from "../lib/marketplace-mock";
 
-type Phase = "idle" | "compiled";
+type View = "intake" | "clarify" | "plan" | "session";
 
 function randomTxHash() {
   return "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 }
 
+const TITLES: Record<View, string> = {
+  intake: "Command Center",
+  clarify: "Compile Intent",
+  plan: "Compile Intent",
+  session: "Active Session",
+};
+
 export default function AppHome() {
   const [input, setInput] = useState("");
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [view, setView] = useState<View>("intake");
   const [intent, setIntent] = useState("");
+  const [plan, setPlan] = useState<MarketPlan | null>(null);
   const [jobs, setJobs] = useState<LiveJob[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sideOpen, setSideOpen] = useState(true);
+  const [network, setNetwork] = useState<Network>("mainnet");
+  const [capsOpen, setCapsOpen] = useState(false);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  useEffect(() => {
+    return () => timers.current.forEach((t) => clearTimeout(t));
+  }, []);
 
   const submitIntent = (text: string) => {
     setInput(text);
     setIntent(text);
-    setPhase("compiled");
+    if (/swap/i.test(text)) {
+      setView("clarify");
+    } else {
+      setPlan(planFor(text));
+      setView("plan");
+    }
   };
 
-  const handleSign = () => {
-    const id = Math.random().toString(36).slice(2);
-    setJobs((prev) => [
-      {
-        id,
-        title: intent,
-        status: "monitoring",
-        healthFactor: "1.35",
-        updatedAt: "just now",
-      },
-      ...prev,
-    ]);
+  const handleClarify = (text: string) => {
+    setIntent(text);
+    setPlan(planFor(text));
+    setView("plan");
+  };
+
+  const finalizeJob = (job: LiveJob) => {
+    const txHash = randomTxHash();
+    const receipt: JobReceipt = {
+      txHash,
+      actualCost: job.plan.cost.quoted,
+      quotedCost: job.plan.cost.quoted,
+      gas: job.plan.cost.gas,
+      explorerUrl: `https://bscscan.com/tx/${txHash}`,
+    };
+    setJobs((prev) =>
+      prev.map((j) => (j.id === job.id ? { ...j, progress: j.steps.length, status: "done", receipt } : j))
+    );
     setHistory((prev) => [
-      {
-        id,
-        action: `${intent} - bounded session authorized`,
-        txHash: randomTxHash(),
-        timestamp: "just now",
-      },
+      { id: job.id, action: `${job.intent} - executed`, txHash, timestamp: "just now", tag: "executed" },
       ...prev,
     ]);
-    setPhase("idle");
+    timers.current.delete(job.id);
+  };
+
+  const startJobTimers = (job: LiveJob) => {
+    let step = 0;
+    const tick = () => {
+      step += 1;
+      if (job.monitoring && step >= job.steps.length - 1) {
+        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, progress: job.steps.length - 1 } : j)));
+        timers.current.delete(job.id);
+        return;
+      }
+      if (!job.monitoring && step >= job.steps.length) {
+        finalizeJob(job);
+        return;
+      }
+      setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, progress: step } : j)));
+      timers.current.set(job.id, setTimeout(tick, 1350));
+    };
+    timers.current.set(job.id, setTimeout(tick, 1350));
+  };
+
+  const handleApprove = () => {
+    if (!plan) return;
+    const snapshot = plan;
+    const id = Math.random().toString(36).slice(2);
+    const job: LiveJob = {
+      id,
+      intent: snapshot.intent,
+      plan: snapshot,
+      steps: traceFor(snapshot.intent),
+      progress: 0,
+      status: "running",
+      monitoring: isMonitoringIntent(snapshot.intent),
+      healthFactor: isMonitoringIntent(snapshot.intent) ? "1.31" : undefined,
+      updatedAt: "just now",
+    };
+    setJobs((prev) => [job, ...prev]);
+    setSelectedId(id);
+    setView("session");
     setInput("");
+    setSideOpen(false);
+    startJobTimers(job);
   };
 
   const handleRevoke = (id: string) => {
     const target = jobs.find((j) => j.id === id);
+    const t = timers.current.get(id);
+    if (t) clearTimeout(t);
+    timers.current.delete(id);
     if (target) {
       setHistory((prev) => [
         {
           id,
-          action: `${target.title} - authority revoked`,
+          action: `${target.intent} - authority revoked`,
           txHash: randomTxHash(),
           timestamp: "just now",
+          tag: "revoked",
         },
         ...prev,
       ]);
     }
     setJobs((prev) => prev.filter((j) => j.id !== id));
+    if (selectedId === id) {
+      setSelectedId(null);
+      setView("intake");
+    }
   };
 
   const handleBack = () => {
-    setPhase("idle");
+    setView("intake");
+    setInput("");
+    setIntent("");
+    setPlan(null);
   };
 
+  const selectSession = (id: string) => {
+    setSelectedId(id);
+    setView("session");
+    setSideOpen(false);
+  };
+
+  const selectedJob = selectedId ? jobs.find((j) => j.id === selectedId) ?? null : null;
+  const guards = jobs.filter((j) => j.status === "running");
+  const done = jobs.filter((j) => j.status === "done");
+
   return (
-    <main className="flex flex-1 flex-col">
-      <TopNav />
+    <div className="flex flex-1 min-h-0 overflow-hidden">
+      <Sidebar
+        open={sideOpen}
+        onToggle={() => setSideOpen((o) => !o)}
+        guards={guards}
+        done={done}
+        recents={history}
+        selectedId={selectedId}
+        network={network}
+        onNetworkChange={(n) => {
+          setNetwork(n);
+          setView("intake");
+        }}
+        onNewIntent={handleBack}
+        onSelectSession={selectSession}
+        onOpenCapabilities={() => setCapsOpen(true)}
+        onCloseMobile={() => setSideOpen(false)}
+      />
 
-      <div className="mx-auto w-full max-w-[800px] px-4 pb-24">
-        <motion.div
-          layout
-          className={`flex flex-col ${phase === "idle" && jobs.length === 0 ? "pt-14 md:pt-20" : "pt-8"}`}
-          transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-        >
-          <OmniInput value={input} onChange={setInput} onSubmit={submitIntent} />
+      <div className="flex flex-1 flex-col min-w-0">
+        <WorkspaceHeader
+          title={TITLES[view]}
+          network={network}
+          onNetworkChange={setNetwork}
+          onMenuOpen={() => setSideOpen(true)}
+        />
 
-          <AnimatePresence>
-            {phase === "idle" && jobs.length === 0 && (
-              <SuggestionPills onSelect={submitIntent} />
-            )}
-            {phase === "compiled" && (
-              <CompiledWorkflow intent={intent} onSign={handleSign} onBack={handleBack} />
-            )}
-          </AnimatePresence>
-        </motion.div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[820px] px-4 md:px-6 pb-24">
+            <motion.div
+              layout
+              className={`flex flex-col ${view === "intake" && jobs.length === 0 ? "pt-10 md:pt-16" : "pt-6 md:pt-8"}`}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <AnimatePresence mode="wait">
+                {view === "intake" && (
+                  <motion.div key="intake" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <OmniInput value={input} onChange={setInput} onSubmit={submitIntent} />
+                    <SuggestionPills onSelect={submitIntent} />
+                  </motion.div>
+                )}
 
-        {jobs.length > 0 && (
-          <LiveJobs jobs={jobs} onRevoke={handleRevoke} />
-        )}
+                {view === "clarify" && (
+                  <motion.div key="clarify" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <ClarifyingQuestion
+                      intent={intent}
+                      question={SWAP_CLARIFYING.question}
+                      choices={SWAP_CLARIFYING.choices}
+                      onAnswer={(choice) =>
+                        handleClarify(`Swap ${choice.amount.split(" · ")[0]} for USDT (${choice.amount})`)
+                      }
+                      onEdit={() => {}}
+                      onBack={handleBack}
+                    />
+                  </motion.div>
+                )}
 
-        {history.length > 0 && (
-          <History entries={history} />
-        )}
+                {view === "plan" && plan && (
+                  <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <PlanCard plan={plan} intent={intent} onApprove={handleApprove} onBack={handleBack} />
+                  </motion.div>
+                )}
+
+                {view === "session" && selectedJob && (
+                  <motion.div key="session" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <SessionDashboard job={selectedJob} onBack={handleBack} onRevoke={handleRevoke} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        </div>
       </div>
-    </main>
+
+      <CapabilityDirectory open={capsOpen} onClose={() => setCapsOpen(false)} />
+    </div>
   );
 }
