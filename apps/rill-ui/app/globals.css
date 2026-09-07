@@ -1,34 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  /* Core palette */
-  --background: #0c0810;
-  --background-elevated: #141018;
-  --background-surface: #1a1520;
-  --foreground: #e8e4ec;
-  --foreground-muted: #8a8294;
-  
-  /* Accent colors */
-  --accent-cyan: #00F0FF;
-  --accent-magenta: #FF1E99;
-  
-  /* Semantic */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(0, 240, 255, 0.3);
-  --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.15);
-  --glow-magenta: 0 0 20px rgba(255, 30, 153, 0.15);
+  /* BNB Chain core palette */
+  --background: #0b0e11;
+  --surface: #1e2329;
+  --surface-deep: #161a1f;
+  --border: #2b3139;
+  --accent: #f3ba2f;
+  --foreground: #eaecef;
+  --muted: #848e9c;
+  --danger: #fa3e3e;
+  --success: #0ecb81;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-background-elevated: var(--background-elevated);
-  --color-background-surface: var(--background-surface);
-  --color-foreground: var(--foreground);
-  --color-foreground-muted: var(--foreground-muted);
-  --color-accent-cyan: var(--accent-cyan);
-  --color-accent-magenta: var(--accent-magenta);
+  --color-surface: var(--surface);
+  --color-surface-deep: var(--surface-deep);
   --color-border: var(--border);
-  --color-border-active: var(--border-active);
+  --color-accent: var(--accent);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -37,29 +31,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
-}
-
-/* Monospace for data points */
-.font-data {
-  font-family: var(--font-mono), ui-monospace, monospace;
-}
-
-/* Glow effects */
-.glow-cyan {
-  box-shadow: var(--glow-cyan);
-}
-
-.glow-magenta {
-  box-shadow: var(--glow-magenta);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Focus ring */
 .focus-ring:focus-visible {
-  outline: 2px solid var(--accent-cyan);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Scrollbar styling */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm h-11 px-5 transition-all duration-200 active:scale-[0.97];
+  }
+  .btn-primary {
+    @apply bg-accent text-background hover:bg-accent/90;
+  }
+  .btn-ghost {
+    @apply border border-border text-foreground hover:border-[#3a424c] hover:bg-surface;
+  }
+}
+
+@utility bg-grid-faint {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -70,10 +75,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(234, 236, 239, 0.12);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(234, 236, 239, 0.2);
 }
