@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
 import { InjectDatabase, type Database } from '../../database/drizzle.provider';
-import { events } from '../../database/schema';
+import { eventOutbox, events } from '../../database/schema';
+import { REPUTATION_OUTBOX_DESTINATION } from './reputation-score';
 
 type ActorKind = (typeof events.actorKind.enumValues)[number];
 
@@ -37,21 +38,29 @@ export class EventStoreService {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
   async append(input: AppendEventInput): Promise<AppendedEvent> {
-    const [appended] = await this.db
-      .insert(events)
-      .values({
-        type: input.type,
-        subjectType: input.subjectType,
-        subjectId: input.subjectId ?? null,
-        actorKind: input.actorKind,
-        actorId: input.actorId ?? null,
-        correlationId: input.correlationId ?? null,
-        causationId: input.causationId ?? null,
-        payload: input.payload ?? {},
-        occurredAt: input.occurredAt ?? new Date(),
-      })
-      .returning({ seq: events.seq, eventId: events.eventId });
+    return this.db.transaction(async (tx) => {
+      const [appended] = await tx
+        .insert(events)
+        .values({
+          type: input.type,
+          subjectType: input.subjectType,
+          subjectId: input.subjectId ?? null,
+          actorKind: input.actorKind,
+          actorId: input.actorId ?? null,
+          correlationId: input.correlationId ?? null,
+          causationId: input.causationId ?? null,
+          payload: input.payload ?? {},
+          occurredAt: input.occurredAt ?? new Date(),
+        })
+        .returning({ seq: events.seq, eventId: events.eventId });
 
-    return appended;
+      await tx.insert(eventOutbox).values({
+        eventSeq: appended.seq,
+        destination: REPUTATION_OUTBOX_DESTINATION,
+        status: 'pending',
+      });
+
+      return appended;
+    });
   }
 }

@@ -1,7 +1,30 @@
 import { Injectable } from '@nestjs/common';
 
-// TODO: Map each goal-tree node to a required capability (with assets, protocols and
-// constraints), producing a DAG the marketplace can resolve node-by-node. Nodes may expand:
-// "obtain repayment asset" pulls in a swap capability.
+import type {
+  CapabilityGraphNode,
+  ParsedIntent,
+} from '../../database/schema/intents';
+import {
+  buildCapabilityGraph,
+  planCapabilityGraph,
+} from './capability-graph';
+
+export { buildCapabilityGraph, planCapabilityGraph } from './capability-graph';
+
+/**
+ * Step 4: map a parsed intent onto requirements the marketplace can resolve. Still no agent.
+ * A swap is one node. A protect intent is a DAG against first-party taxonomy keys.
+ */
 @Injectable()
-export class CapabilityGraphService {}
+export class CapabilityGraphService {
+  build(intent: ParsedIntent): CapabilityGraphNode[] {
+    return buildCapabilityGraph(intent);
+  }
+
+  plan(
+    intent: ParsedIntent,
+    available?: readonly string[],
+  ): CapabilityGraphNode[] {
+    return planCapabilityGraph(intent, available);
+  }
+}

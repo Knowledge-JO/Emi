@@ -58,7 +58,11 @@ export const envSchema = z.object({
   /** Where session private keys are read from. Never the database. */
   SESSION_SECRET_PROVIDER: z
     .enum(['env', 'file', 'vault', 'aws_secrets_manager', 'gcp_secret_manager'])
-    .default('env'),
+    .default('file'),
+  /** Directory for per-session keys when SESSION_SECRET_PROVIDER=file. Gitignored. */
+  SESSION_SECRET_DIR: z.string().min(1).default('.secrets/sessions'),
+  /** Override if the configured chain's Keystore is not the well-known mainnet address. */
+  ALTANA_KEYSTORE_ADDRESS: evmAddress.optional(),
 
   /** Privy is the identity provider for human callers. Agents authenticate with API keys. */
   PRIVY_APP_ID: z.string().min(1),
@@ -79,6 +83,16 @@ export const envSchema = z.object({
 
   ERC8183_ESCROW_ADDRESS: evmAddress,
   ERC8004_REGISTRY_ADDRESS: evmAddress,
+  ERC8183_ESCROW_ADDRESS_TESTNET: evmAddress.optional(),
+  ERC8004_REGISTRY_ADDRESS_TESTNET: evmAddress.optional(),
+  /**
+   * On-chain ERC-8004 token id for the seeded SwapMaster listing. Unset keeps the placeholder
+   * `"1"` — do not treat that as our NFT until a live read names SwapMaster.
+   */
+  SWAPMASTER_ONCHAIN_AGENT_ID: z
+    .string()
+    .regex(/^\d+$/, 'expected a decimal ERC-8004 agent id')
+    .optional(),
 
   /**
    * Which vendor serves chat / structured extraction. Each has its own SDK: Gemini uses

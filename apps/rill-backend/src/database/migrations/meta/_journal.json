@@ -22,6 +22,20 @@
       "when": 1788755163793,
       "tag": "0002_add_privy_auth_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788793687350,
+      "tag": "0003_workflows_wallet_id_optional",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788888645149,
+      "tag": "0004_indexer_cursors",
+      "breakpoints": true
     }
   ]
 }

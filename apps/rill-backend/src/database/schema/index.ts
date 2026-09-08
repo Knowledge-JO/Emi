@@ -39,3 +39,4 @@ export * from './reputation';
 
 // audit
 export * from './events';
+export * from './indexer-cursors';

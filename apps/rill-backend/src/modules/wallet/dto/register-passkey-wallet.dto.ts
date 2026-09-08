@@ -17,7 +17,9 @@ import {
  */
 export class RegisterPasskeyWalletDto {
   /** The smart-account address, which for a passkey wallet is the upgraded throwaway EOA. */
-  @Matches(/^0x[0-9a-fA-F]{40}$/, { message: 'address must be a 20-byte hex address' })
+  @Matches(/^0x[0-9a-fA-F]{40}$/, {
+    message: 'address must be a 20-byte hex address',
+  })
   address!: string;
 
   /** WebAuthn credential ID, base64url as the browser returns it — not hex. */

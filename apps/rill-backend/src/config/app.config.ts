@@ -21,6 +21,13 @@ const ALTANA_CHAIN_IDS = {
   ethereum: 1,
 } as const;
 
+/** Keystore addresses from the Altana SDK docs. Kept here because the SDK is ESM-only. */
+const ALTANA_KEYSTORES = {
+  bnb: '0x6572427ed530badcf7375cf9a4709d8d2b0e7e0a',
+  'bnb-testnet': '0x6b8361c29d05d498b1a12b54a37310f94171e94a',
+  ethereum: '0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b',
+} as const;
+
 const buildConfig = (env: Env) =>
   ({
     app: {
@@ -51,6 +58,9 @@ const buildConfig = (env: Env) =>
       chain: env.ALTANA_CHAIN,
       chainId: ALTANA_CHAIN_IDS[env.ALTANA_CHAIN],
       secretProvider: env.SESSION_SECRET_PROVIDER,
+      secretDir: env.SESSION_SECRET_DIR,
+      keyStore:
+        env.ALTANA_KEYSTORE_ADDRESS ?? ALTANA_KEYSTORES[env.ALTANA_CHAIN],
     },
     privy: {
       appId: env.PRIVY_APP_ID,
@@ -61,10 +71,18 @@ const buildConfig = (env: Env) =>
       merchantAddress: env.X402_MERCHANT_ADDRESS,
     },
     erc8183: {
-      escrowAddress: env.ERC8183_ESCROW_ADDRESS,
+      escrowAddress:
+        env.ALTANA_CHAIN === 'bnb-testnet'
+          ? (env.ERC8183_ESCROW_ADDRESS_TESTNET ?? env.ERC8183_ESCROW_ADDRESS)
+          : env.ERC8183_ESCROW_ADDRESS,
     },
     erc8004: {
-      registryAddress: env.ERC8004_REGISTRY_ADDRESS,
+      registryAddress:
+        env.ALTANA_CHAIN === 'bnb-testnet'
+          ? (env.ERC8004_REGISTRY_ADDRESS_TESTNET ??
+            env.ERC8004_REGISTRY_ADDRESS)
+          : env.ERC8004_REGISTRY_ADDRESS,
+      swapMasterOnchainAgentId: env.SWAPMASTER_ONCHAIN_AGENT_ID ?? '1',
     },
     ai: {
       provider: env.AI_PROVIDER,

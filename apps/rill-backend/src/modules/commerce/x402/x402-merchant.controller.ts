@@ -1,7 +1,31 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 
-// TODO: Rill's own paid capabilities — /quote, /risk-analysis, /pool-analysis,
-// /portfolio-analysis. Unpaid requests get a 402 with the price and resource; paid requests carry
-// a verified payment and execute.
+import { X402PaymentGuard } from './x402-payment.guard';
+
+/**
+ * Rill's own paid capabilities. Unpaid requests get HTTP 402 with the price.
+ * Paid requests have already settled before this handler runs.
+ */
 @Controller('capabilities')
-export class X402MerchantController {}
+@UseGuards(X402PaymentGuard)
+export class X402MerchantController {
+  @Get('quote')
+  quote() {
+    return {
+      pair: 'USDT/BNB',
+      price: '0.0017',
+      source: 'rill',
+      paid: true,
+    };
+  }
+
+  @Get('risk-analysis')
+  riskAnalysis() {
+    return {
+      subject: 'aave-position',
+      healthFactor: '1.42',
+      risk: 'moderate',
+      paid: true,
+    };
+  }
+}

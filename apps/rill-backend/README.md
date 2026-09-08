@@ -31,7 +31,7 @@ src/
     ├── marketplace/   registry, discovery, capabilities, pricing, ranking, reputation
     ├── identity/      ERC-8004 agent identity
     ├── orchestrator/  planner, agent selection, workflow builder, authorization planner, router
-    ├── agents/        agent network adapters (swap, loan, risk, liquidity, token, research)
+    ├── agents/        skills registry + adapters (swap, loan, risk, liquidity, token, research)
     ├── commerce/
     │   ├── x402/      pay for capabilities, and charge for ours as a merchant
     │   └── erc8183/   job escrow: create, fund, deliver, settle, dispute
@@ -78,6 +78,7 @@ The sharp edges, all of which are recorded as TODOs at the relevant call sites:
 - Verify authority on-chain with `isValidKey(user, keyId)`, which answers *exists AND not revoked
   AND not expired* in one call. `getKeys(user)` drops revoked keys but **not expired ones** — expiry
   is a passive timestamp, so check each id with `isValidKey` before trusting it.
+  `GET /chain/keystore/:user/:keyId` is the public read of that view.
 - Long-running workflows outlive short sessions: re-check validity before each execute.
 
 ## Setup
@@ -107,7 +108,8 @@ Local services:
 ```sh
 docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres pgvector/pgvector:pg17
 docker run -d -p 6379:6379 redis:7
-temporal server start-dev
+temporal server start-dev   # optional; API records a handle even when Temporal is down
+# Worker (separate process) listens on TEMPORAL_TASK_QUEUE=rill for loanProtection
 ```
 
 PostgreSQL must have `pgvector` enabled before any vector column is created — semantic agent

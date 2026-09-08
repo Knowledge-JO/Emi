@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 
 import type { RillConfigService } from '../../config/app.config';
 import { EMBEDDING_DIMENSIONS } from '../../database/schema/common';
-import { EmbeddingModel } from './embedding-model';
+import { EmbeddingModel, type EmbeddingTask } from './embedding-model';
 
 @Injectable()
 export class OpenAIEmbeddingModel extends EmbeddingModel {
@@ -25,7 +25,7 @@ export class OpenAIEmbeddingModel extends EmbeddingModel {
     this.model = config.get('ai.embeddingModel', { infer: true });
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, _task: EmbeddingTask = 'query'): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model: this.model,
       input: text,

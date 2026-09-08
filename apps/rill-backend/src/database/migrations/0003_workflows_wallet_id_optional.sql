@@ -1,0 +1,1 @@
+ALTER TABLE "workflows" ALTER COLUMN "wallet_id" DROP NOT NULL;

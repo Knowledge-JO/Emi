@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 
 import type { RillConfigService } from '../../config/app.config';
 import { EMBEDDING_DIMENSIONS } from '../../database/schema/common';
-import { EmbeddingModel } from './embedding-model';
+import { EmbeddingModel, type EmbeddingTask } from './embedding-model';
 
 /** Gemini embeddings via `@google/genai`, truncated to the schema's 1536-dimension columns. */
 @Injectable()
@@ -26,12 +26,13 @@ export class GeminiEmbeddingModel extends EmbeddingModel {
     this.model = config.get('ai.embeddingModel', { infer: true });
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, task: EmbeddingTask = 'query'): Promise<number[]> {
     const response = await this.client.models.embedContent({
       model: this.model,
       contents: text,
       config: {
-        taskType: 'RETRIEVAL_QUERY',
+        taskType:
+          task === 'document' ? 'RETRIEVAL_DOCUMENT' : 'RETRIEVAL_QUERY',
         outputDimensionality: this.dimensions,
       },
     });

@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
-// TODO: Score candidates on capability fit, reputation, price and availability, and persist the
-// score breakdown so a recommendation is explainable rather than a black box.
+import {
+  rankCandidates,
+  type RankInput,
+  type RankedCandidate,
+} from './ranking';
+
 @Injectable()
-export class AgentRankingService {}
+export class AgentRankingService {
+  rank(candidates: RankInput[]): RankedCandidate[] {
+    return rankCandidates(candidates);
+  }
+}

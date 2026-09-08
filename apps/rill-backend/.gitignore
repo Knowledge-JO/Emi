@@ -15,6 +15,9 @@ lerna-debug.log*
 # OS
 .DS_Store
 
+# Per-session Altana keys (never commit)
+.secrets/
+
 # Tests
 /coverage
 /.nyc_output

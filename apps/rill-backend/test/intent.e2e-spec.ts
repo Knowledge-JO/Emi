@@ -3,13 +3,18 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 
 import { EMBEDDING_DIMENSIONS } from '../src/database/schema';
+import { CATALOG_IDS } from '../src/database/seed/ids';
 import type { EmbeddingModel } from '../src/modules/ai/embedding-model';
 import type { LanguageModel } from '../src/modules/ai/language-model';
 import type { PrivyIdentity } from '../src/modules/auth/privy-identity.interface';
+import { PROTECT_BNB_LOAN } from '../src/modules/intent/protect-loan.fixture';
 import { SWAP_FIVE_USDT } from '../src/modules/intent/swap-five-usdt.fixture';
+import type { MarketplaceMatchingService } from '../src/modules/marketplace/marketplace-matching.service';
 import { FakeDatabase, createTestApp } from './test-app';
 
 const DID = 'did:privy:cm123456789';
+
+let parsedKind: 'swap' | 'protect' = 'swap';
 
 describe('Intent parse (e2e)', () => {
   let app: INestApplication<App>;
@@ -22,6 +27,7 @@ describe('Intent parse (e2e)', () => {
       privy: fakePrivy(),
       languageModel: fakeLanguage(),
       embeddingModel: fakeEmbeddings(),
+      matching: swapMasterMatching(),
     });
   });
 
@@ -37,6 +43,7 @@ describe('Intent parse (e2e)', () => {
   });
 
   it('turns a swap message into the standard intent object', async () => {
+    parsedKind = 'swap';
     await request(app.getHttpServer())
       .post('/auth/session')
       .set('Authorization', 'Bearer good-token')
@@ -51,8 +58,64 @@ describe('Intent parse (e2e)', () => {
     expect(response.body.intent).toEqual(SWAP_FIVE_USDT);
     expect(response.body.intent.legs[0].from.amount).toBe('5');
     expect(response.body.embeddingDimensions).toBe(EMBEDDING_DIMENSIONS);
+    expect(response.body.status).toBe('resolved');
+    expect(response.body.capabilityGraph).toEqual([
+      {
+        id: 'leg-0',
+        goalId: 'execute',
+        taxonomyKey: 'defi.swap',
+        dependsOn: [],
+        input: {
+          fromSymbol: 'USDT',
+          toSymbol: 'BNB',
+          amount: '5',
+          chain: 'bnb',
+        },
+      },
+    ]);
+    expect(response.body.matches).toEqual([
+      expect.objectContaining({
+        requestedTaxonomyKey: 'defi.swap',
+        rank: 1,
+        agent: expect.objectContaining({
+          slug: 'swapmaster',
+          name: 'SwapMaster',
+        }),
+        capability: expect.objectContaining({
+          taxonomyKey: 'defi.swap',
+        }),
+      }),
+    ]);
+    expect(response.body.unmatchedTaxonomyKeys).toEqual([]);
     expect(db.intents).toHaveLength(1);
-    expect(db.events.map((event) => event.type)).toContain('intent.parsed');
+    expect(db.events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(['intent.parsed', 'intent.resolved']),
+    );
+  });
+
+  it('expands a protect message into a catalog DAG', async () => {
+    parsedKind = 'protect';
+    const response = await request(app.getHttpServer())
+      .post('/intents')
+      .set('Authorization', 'Bearer good-token')
+      .send({ text: 'protect my bnb loan' })
+      .expect(201);
+
+    expect(response.body.intent.kind).toBe('protect');
+    expect(
+      response.body.capabilityGraph.map(
+        (node: { id: string; taxonomyKey: string; dependsOn: string[] }) => [
+          node.id,
+          node.taxonomyKey,
+          node.dependsOn,
+        ],
+      ),
+    ).toEqual([
+      ['monitor', 'research.screen', []],
+      ['risk', 'risk.health_factor', ['monitor']],
+      ['swap', 'defi.swap', ['risk']],
+      ['repay', 'defi.lending.supply', ['swap', 'risk']],
+    ]);
   });
 });
 
@@ -60,7 +123,7 @@ function fakeLanguage(): LanguageModel {
   return {
     provider: 'gemini',
     generateJson: async () => ({
-      json: SWAP_FIVE_USDT,
+      json: parsedKind === 'protect' ? PROTECT_BNB_LOAN : SWAP_FIVE_USDT,
       model: 'gemini-2.5-flash',
       promptTokens: 10,
       completionTokens: 20,
@@ -74,6 +137,45 @@ function fakeEmbeddings(): EmbeddingModel {
     provider: 'gemini',
     dimensions: EMBEDDING_DIMENSIONS,
     embed: async () => Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0),
+  };
+}
+
+function swapMasterMatching(): Pick<
+  MarketplaceMatchingService,
+  'matchIntent' | 'listForIntent'
+> {
+  return {
+    matchIntent: (input) =>
+      Promise.resolve({
+        unmatchedTaxonomyKeys: [],
+        matches: [
+          {
+            graphNodeId: input.graph[0]?.id ?? 'leg-0',
+            requestedTaxonomyKey: 'defi.swap',
+            rank: 1,
+            score: 0.85,
+            capabilityFitScore: 1,
+            priceScore: 1,
+            availabilityScore: 1,
+            reputationScore: 0.5,
+            quotedPrice: '10000000000000000',
+            quotedAssetId: CATALOG_IDS.assetUsdt,
+            settlementRail: 'erc8183',
+            match: 'exact',
+            agent: {
+              id: CATALOG_IDS.agentSwapmaster,
+              slug: 'swapmaster',
+              name: 'SwapMaster',
+            },
+            capability: {
+              id: CATALOG_IDS.capabilitySwap,
+              name: 'swap',
+              taxonomyKey: 'defi.swap',
+            },
+          },
+        ],
+      }),
+    listForIntent: () => Promise.resolve([]),
   };
 }
 

@@ -197,6 +197,7 @@ Rules:
 - If the user says BNB, USDT, or Pancake without naming another chain, chain is "bnb".
 - A swap "X for Y" means from.symbol=X with from.amount set, to.symbol=Y with to.amount null.
 - taxonomyKey for a swap is "defi.swap".
+- Loan protection (kind="protect") is a goal tree with four children: monitor, calculate health factor, obtain the repayment asset, repay. Legs may be a single monitor; the planner expands the DAG.
 - If the message is greeting, nonsense, or not an actionable financial outcome: kind="unknown", rejected=true, legs=[].
 - Do not invent an amount the user did not state. Put the gap in missing[].
 - Keep confidence honest. Guessing an asset drops confidence below 0.6 and goes in assumptions[].`;

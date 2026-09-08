@@ -62,6 +62,79 @@ export class WalletService {
     });
   }
 
+  findForAgent(agentId: string): Promise<WalletRecord | undefined> {
+    return this.db.query.wallets.findFirst({
+      where: and(
+        eq(wallets.ownerKind, 'agent'),
+        eq(wallets.ownerAgentId, agentId),
+        eq(wallets.status, 'active'),
+      ),
+    });
+  }
+
+  /**
+   * Record an agent's own Altana account. Distinct from the user grant: this wallet receives
+   * escrow and pays capabilities. The admin key is not a passkey — custody stays with whoever
+   * created the address (`external` = we only store the address).
+   */
+  async registerAgentWallet(input: {
+    agentId: string;
+    address: string;
+    chainIds: number[];
+    label?: string;
+  }): Promise<{ wallet: WalletRecord; created: boolean }> {
+    const address = input.address.toLowerCase();
+    this.assertServedChains(input.chainIds);
+
+    const existing = await this.findForAgent(input.agentId);
+    if (existing) {
+      if (existing.address !== address) {
+        throw new ConflictException(
+          `Agent already has wallet ${existing.address}`,
+        );
+      }
+      return { wallet: existing, created: false };
+    }
+
+    const [inserted] = await this.db
+      .insert(wallets)
+      .values({
+        address,
+        ownerKind: 'agent',
+        ownerAgentId: input.agentId,
+        signerKind: 'external',
+        label: input.label ?? null,
+        chainIds: input.chainIds,
+      })
+      .onConflictDoNothing({ target: wallets.address })
+      .returning();
+
+    if (!inserted) {
+      const owner = await this.db.query.wallets.findFirst({
+        where: eq(wallets.address, address),
+      });
+      if (owner?.ownerAgentId === input.agentId) {
+        return { wallet: owner, created: false };
+      }
+      throw new ConflictException('Wallet address is already registered');
+    }
+
+    await this.events.append({
+      type: 'wallet.created',
+      subjectType: 'wallet',
+      subjectId: inserted.id,
+      actorKind: 'agent',
+      actorId: input.agentId,
+      payload: {
+        address,
+        signerKind: 'external',
+        chainIds: input.chainIds,
+      },
+    });
+
+    return { wallet: inserted, created: true };
+  }
+
   /**
    * Records a passkey wallet the browser just created. Idempotent for the same address, so a
    * client that loses the response — after a ceremony the user cannot repeat identically — can
@@ -104,7 +177,10 @@ export class WalletService {
       .returning();
 
     if (!inserted) {
-      return { wallet: await this.resolveAddressConflict(address, user), created: false };
+      return {
+        wallet: await this.resolveAddressConflict(address, user),
+        created: false,
+      };
     }
 
     this.logger.log(`Registered passkey wallet ${address} for user ${user.id}`);

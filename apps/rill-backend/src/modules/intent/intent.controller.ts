@@ -23,7 +23,7 @@ export class IntentController {
     private readonly intents: IntentService,
   ) {}
 
-  /** Submit a natural-language outcome. Returns the schema-validated intent object. */
+  /** Submit a natural-language outcome. Returns the parsed intent and ranked agent matches. */
   @Post()
   async create(
     @CurrentPrincipal() principal: PrivyPrincipal,

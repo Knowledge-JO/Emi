@@ -1,7 +1,27 @@
 import { Injectable } from '@nestjs/common';
 
-// TODO: Resolve the price of a capability and which rail settles it: per-request capabilities
-// price into x402, per-job deliverables price into ERC-8183 escrow. Produces the cost estimate a
-// user approves before any session is granted.
+export type CapabilityQuote = {
+  amount: string;
+  assetId: string;
+  settlementRail: 'x402' | 'erc8183';
+};
+
+/**
+ * Listing price, not a swap quote. The number that lands on `recommendations.quoted_price` is
+ * what the agent charges to do the job, in the capability's price asset. The swap's 5 USDT is
+ * the user's notional and is not this figure.
+ */
 @Injectable()
-export class AgentPricingService {}
+export class AgentPricingService {
+  quote(capability: {
+    unitPrice: string;
+    priceAssetId: string;
+    settlementRail: CapabilityQuote['settlementRail'];
+  }): CapabilityQuote {
+    return {
+      amount: capability.unitPrice,
+      assetId: capability.priceAssetId,
+      settlementRail: capability.settlementRail,
+    };
+  }
+}

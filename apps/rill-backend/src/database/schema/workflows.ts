@@ -43,10 +43,14 @@ export const workflows = pgTable(
     intentId: uuid('intent_id')
       .notNull()
       .references(() => intents.id, { onDelete: 'restrict' }),
-    /** The wallet that grants authority for every step. */
-    walletId: uuid('wallet_id')
-      .notNull()
-      .references(() => wallets.id, { onDelete: 'restrict' }),
+    /**
+     * The wallet that will grant authority. Null on a draft plan is allowed — the user may review
+     * the scope before they have registered an Altana account. Granting a session still requires
+     * this to be set.
+     */
+    walletId: uuid('wallet_id').references(() => wallets.id, {
+      onDelete: 'restrict',
+    }),
     /** Set once the user has approved the plan and the session has been granted on-chain. */
     sessionId: uuid('session_id').references(() => sessions.id, {
       onDelete: 'set null',

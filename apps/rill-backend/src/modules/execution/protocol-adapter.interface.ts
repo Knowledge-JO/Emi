@@ -1,3 +1,8 @@
-// TODO: The contract every protocol adapter implements: the contract addresses it needs (which
-// feed session allowlists), a quote/simulate method, and a buildCalls method returning
-// { to, data, value } ready for client.execute.
+import type { BuiltCall, SwapBuildResult } from './pancakeswap-swap';
+
+export type ProtocolCalls = {
+  calls: BuiltCall[];
+  quote?: SwapBuildResult['quote'];
+  play: string;
+  protocolSlug: string;
+};

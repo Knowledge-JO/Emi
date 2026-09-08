@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
-// TODO: Liquidity/LP agent — add, remove and rebalance liquidity positions; analyse pools.
+/**
+ * LP listings wait until a liquidity protocol is in the catalog. No playbook, no signer.
+ */
 @Injectable()
-export class LiquidityAgentAdapter {}
+export class LiquidityAgentAdapter {
+  playbook(): never {
+    throw new Error(
+      'Liquidity listings are not seeded — add a catalog protocol before a playbook',
+    );
+  }
+}

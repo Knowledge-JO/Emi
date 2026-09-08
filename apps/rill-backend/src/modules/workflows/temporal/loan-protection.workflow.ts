@@ -1,7 +1,27 @@
-// TODO: The reference durable workflow:
-//   START → Monitor → Wait → Check
-//                              ├── HF > 1.3 ──▶ WAIT
-//                              └── HF < 1.3 ──▶ Execute → Verify → COMPLETE
-// Workflow code must stay deterministic: no direct I/O, no Date.now(), no random — everything
-// external goes through an activity. Re-check that the Altana session is still valid and unexpired
-// before each execute; a multi-day workflow will outlive short sessions.
+/**
+ * Temporal workflow isolate. Imports only `@temporalio/workflow` and the pure policy.
+ * Activities are the only I/O: health factor, session check, execute, verify.
+ */
+import { proxyActivities, sleep } from '@temporalio/workflow';
+
+import {
+  runLoanProtection,
+  type LoanProtectionActivities,
+  type LoanProtectionInput,
+  type LoanProtectionState,
+} from './loan-protection';
+
+const activities = proxyActivities<LoanProtectionActivities>({
+  startToCloseTimeout: '2 minutes',
+  retry: {
+    maximumAttempts: 5,
+    backoffCoefficient: 2,
+    initialInterval: '1s',
+  },
+});
+
+export async function loanProtection(
+  input: LoanProtectionInput,
+): Promise<LoanProtectionState> {
+  return runLoanProtection(activities, input, sleep);
+}

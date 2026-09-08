@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 
-// TODO: Swap agent — quote and execute token swaps on PancakeSwap. Capability declares supported
-// assets and slippage bounds; execution goes through the PancakeSwap execution adapter.
+import { viewSkill, type AgentPlaybookView } from '../agent.interface';
+import { SkillRegistryService } from '../skills/skill-registry.service';
+
+/**
+ * SwapMaster competence is `pancakeswap-trading`. Execute loads that playbook elsewhere.
+ * This adapter never constructs a signer.
+ */
 @Injectable()
-export class SwapAgentAdapter {}
+export class SwapAgentAdapter {
+  constructor(private readonly skills: SkillRegistryService) {}
+
+  playbook(): AgentPlaybookView {
+    return viewSkill(this.skills.require('pancakeswap-trading'));
+  }
+}
