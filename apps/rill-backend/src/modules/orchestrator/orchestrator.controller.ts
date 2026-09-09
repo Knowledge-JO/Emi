@@ -35,7 +35,7 @@ export class OrchestratorController {
     @Body() body: CreatePlanDto,
   ) {
     const user = await this.auth.requireUser(principal);
-    return this.orchestrator.planForUser(user.id, body.intentId);
+    return this.orchestrator.planForUser(user.id, body.intentId, body.selections);
   }
 
   @Post('plans/:id/grant')

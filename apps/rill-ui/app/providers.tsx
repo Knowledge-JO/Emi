@@ -80,9 +80,10 @@ export function Providers({ children }: { children: ReactNode }) {
           accentColor: "#F3BA2F",
           logo: "/icon.svg",
         },
-        loginMethods: ["wallet"],
+        loginMethods: ["google", "apple", "email"],
+        // Privy is identity only. On-chain authority is an Altana session, not a Privy wallet.
         embeddedWallets: {
-          ethereum: { createOnLogin: "all-users" },
+          ethereum: { createOnLogin: "off" },
         },
         defaultChain: bsc,
       }}

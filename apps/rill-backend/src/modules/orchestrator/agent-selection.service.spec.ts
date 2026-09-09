@@ -20,6 +20,27 @@ describe('AgentSelectionService', () => {
     expect(unmatched).toEqual([]);
   });
 
+  it('honors an explicit pick over rank 1', () => {
+    const { selected, invalid } = selection.pickRankOne(
+      ['leg-0'],
+      [rec('leg-0', 1, 'swapmaster'), rec('leg-0', 2, 'alt')],
+      [{ graphNodeId: 'leg-0', agentId: 'agent-alt' }],
+    );
+    expect(selected.map((row) => row.capabilityId)).toEqual(['alt']);
+    expect(invalid).toEqual([]);
+  });
+
+  it('rejects a pick that is not a recommendation for that node', () => {
+    const { invalid } = selection.pickRankOne(
+      ['leg-0'],
+      [rec('leg-0', 1, 'swapmaster')],
+      [{ graphNodeId: 'leg-0', agentId: 'agent-unknown' }],
+    );
+    expect(invalid).toEqual([
+      { graphNodeId: 'leg-0', agentId: 'agent-unknown' },
+    ]);
+  });
+
   it('lists a node with no recommendations as unmatched', () => {
     const { unmatched } = selection.pickRankOne(['leg-0'], []);
     expect(unmatched).toEqual(['leg-0']);

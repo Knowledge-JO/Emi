@@ -1,67 +1,51 @@
 "use client";
 
-import { SignOut, Wallet } from "@phosphor-icons/react";
-import { useWallet } from "../providers";
+import Link from "next/link";
+import { SignOut } from "@phosphor-icons/react";
 
-function shortAddr(addr: string) {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+import { useWallet } from "../providers";
+import { useRillSession } from "@/lib/use-rill-session";
 
 export function WalletButton() {
-  const { enabled, ready, authenticated, address, login, logout } = useWallet();
+  const { enabled, ready } = useWallet();
+  const session = useRillSession();
 
   if (!enabled) {
     return (
-      <button
-        className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-surface border border-border text-sm text-foreground cursor-pointer transition-colors hover:border-[#3a424c]"
-        aria-label="Wallet connection not configured"
-        title="Set NEXT_PUBLIC_PRIVY_APP_ID to enable wallet connection"
+      <Link
+        href="/signin"
+        className="flex h-9 items-center rounded-full border border-border bg-surface px-3.5 text-xs text-foreground"
       >
-        <Wallet size={15} className="text-muted" />
-        <span className="text-xs">Connect Wallet</span>
+        Sign in
+      </Link>
+    );
+  }
+
+  if (!ready || session.status === "loading" || session.status === "verifying") {
+    return (
+      <button className="flex h-9 items-center rounded-full border border-border bg-surface px-3.5">
+        <span className="font-mono text-xs text-muted">Loading…</span>
       </button>
     );
   }
 
-  if (!ready) {
+  if (session.status === "verified") {
     return (
       <button
-        className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-surface border border-border text-sm text-muted"
-        aria-label="Loading wallet"
+        aria-label="Sign out"
+        onClick={() => void session.signOut()}
+        className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-xs text-muted hover:border-danger/40 hover:text-danger"
       >
-        <span className="font-mono text-xs">Loading…</span>
+        <span className="h-1.5 w-1.5 rounded-full bg-success" />
+        Sign out
+        <SignOut size={14} />
       </button>
-    );
-  }
-
-  if (authenticated && address) {
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-surface border border-border text-sm text-foreground transition-colors hover:border-[#3a424c]"
-          aria-label={`Wallet ${shortAddr(address)}`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
-          <span className="font-mono text-xs">{shortAddr(address)}</span>
-        </button>
-        <button
-          aria-label="Disconnect wallet"
-          onClick={logout}
-          className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-muted transition-colors hover:text-danger hover:border-danger/40"
-        >
-          <SignOut size={15} />
-        </button>
-      </div>
     );
   }
 
   return (
-    <button
-      onClick={login}
-      className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-accent text-background text-sm font-semibold transition-all active:scale-[0.97] hover:bg-accent/90"
-    >
-      <Wallet size={15} weight="bold" />
-      <span>Connect</span>
-    </button>
+    <Link href="/signin?next=/app" className="btn btn-primary h-9 px-4">
+      Sign in
+    </Link>
   );
 }

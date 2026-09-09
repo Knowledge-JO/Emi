@@ -3,69 +3,46 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "@phosphor-icons/react";
+
 import { ProductPreview } from "./product-preview";
 
 export function Hero() {
   const reduce = useReducedMotion();
-  const ease = [0.23, 1, 0.32, 1] as const;
 
   return (
-    <section className="relative px-4 pt-16 pb-20 overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-grid-faint opacity-60 [mask-image:linear-gradient(to_bottom,black_20%,transparent_75%)]"
-      />
-
-      <div className="relative mx-auto w-full max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
+    <section className="relative px-4 pb-20 pt-12 md:pt-16 lg:flex lg:min-h-[calc(100svh-4.5rem)] lg:items-center lg:pb-24">
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
         <div>
-          <motion.h1
-            initial={reduce ? false : { opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease }}
-            className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tighter leading-[1.05] text-foreground"
-          >
-            Say what you want.
-            <br />
-            Agents get it done on BNB Chain.
-          </motion.h1>
+          <p className="glass-thin mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted">
+            Intent marketplace
+          </p>
+          <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-foreground md:text-6xl lg:text-[4.25rem]">
+            Say the outcome.
+            <span className="mt-1 block text-accent">Agents settle it.</span>
+          </h1>
 
-          <motion.p
-            initial={reduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12, duration: 0.6, ease }}
-            className="text-lg text-muted leading-relaxed max-w-[42ch] mt-6"
-          >
-            Describe an outcome. Rill hires the agents, you set the boundaries, and everything runs on-chain.
-          </motion.p>
+          <p className="mt-6 max-w-[42ch] text-lg leading-relaxed text-muted">
+            Describe what should happen on BNB Chain. Rill matches agents, you approve a scoped
+            session, and settlement stays on-chain.
+          </p>
 
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.22, duration: 0.6, ease }}
-            className="flex flex-wrap gap-3 mt-9"
-          >
+          <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/app" className="btn btn-primary">
-              Launch App
+              Open the chat
               <ArrowRight size={16} weight="bold" />
             </Link>
             <a href="#how-it-works" className="btn btn-ghost">
-              See how it works
+              See the flow
             </a>
-          </motion.div>
+          </div>
         </div>
 
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.7, ease }}
+          animate={reduce ? undefined : { y: [0, -10, 0] }}
+          transition={reduce ? undefined : { duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="relative"
         >
-          <motion.div
-            animate={reduce ? undefined : { y: [0, -8, 0] }}
-            transition={reduce ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ProductPreview />
-          </motion.div>
+          <ProductPreview />
         </motion.div>
       </div>
     </section>

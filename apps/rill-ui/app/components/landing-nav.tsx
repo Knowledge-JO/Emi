@@ -1,32 +1,55 @@
+"use client";
+
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
+
 import { Logo } from "./logo";
 
 export function LandingNav() {
+  const reduce = useReducedMotion();
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-6xl flex items-center justify-between h-14 px-4">
+    <motion.header
+      initial={false}
+      animate={reduce ? undefined : { y: 0 }}
+      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+      className="sticky top-0 z-40 px-4 pt-4"
+    >
+      <div className="glass mx-auto flex h-14 w-full max-w-5xl items-center justify-between rounded-full px-3 pl-4">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center">
             <Logo />
           </Link>
-          <span className="flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5">
-            <svg viewBox="0 0 24 24" className="h-3 w-3 text-accent" fill="currentColor" aria-hidden="true">
-              <path d="M12 2 6.4 7.6 12 13.2l5.6-5.6L12 2zM2 12l5.6 5.6L12 12 6.4 6.4 2 12zm10 0 5.6 5.6L22 12l-5.6-5.6L12 12zm-4.4 4.4L12 22l4.4-5.6L12 12l-4.4 4.4z" />
-            </svg>
-            <span className="text-xs text-muted">BNB Chain</span>
+          <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <span className="text-[11px] text-muted">BNB Chain</span>
           </span>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm text-muted">
-          <a href="#protocols" className="hover:text-foreground transition-colors">Protocols</a>
-          <a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a>
-          <a href="#workflows" className="hover:text-foreground transition-colors">Workflows</a>
+        <nav className="hidden items-center gap-6 text-sm text-muted md:flex">
+          <a href="#protocols" className="hover:text-foreground">
+            Rails
+          </a>
+          <a href="#how-it-works" className="hover:text-foreground">
+            Flow
+          </a>
+          <a href="#workflows" className="hover:text-foreground">
+            Workflows
+          </a>
         </nav>
 
-        <Link href="/app" className="btn btn-primary h-9 px-4 rounded-full">
-          Launch App
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/signin?next=/app"
+            className="hidden h-9 items-center px-3 text-sm text-muted hover:text-foreground sm:flex"
+          >
+            Sign in
+          </Link>
+          <Link href="/app" className="btn btn-primary h-9 px-4">
+            Launch App
+          </Link>
+        </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

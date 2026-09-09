@@ -198,7 +198,37 @@ Inline engine is enough for a single swap. Monitoring is not.
 
 ## Next (recommended order)
 
-The vertical slice through the agent economy is in place. Remaining items stay in Explicitly later.
+The vertical slice through the agent economy is in place. Remaining **backend** items stay in Explicitly later.
+
+---
+
+## Frontend — wired
+
+`/signin` and `/app` cover the swap chat slice. Additional screens call APIs that already
+existed; no new backend was added. Landing stays marketing-only.
+
+### Product gaps in `/app`
+
+- [x] Show Altana passkey wallet from `GET /wallets/me` instead of the Privy “not connected” pill
+- [x] Show balances after grant via `GET /wallets/me/balances`
+- [x] Persist chat history (`GET /intents/:id`); refresh should not wipe conversations
+- [x] Sign-out always calls `DELETE /auth/session` (`WalletButton` currently Privy-only)
+- [x] Long-running protect / Temporal UX: keep polling, show DAG / monitor progress, do not stop at ~60s
+- [x] ERC-8183 job UI: hire / fund / deliver / settle against `/jobs/*` when a plan step uses that rail
+- [x] x402 pay UI: quotes and payment ledger against `/x402/*` and `/capabilities/*` when a plan step uses that rail
+
+### Backend-ready screens
+
+- [x] Agent detail (`GET /marketplace/agents/:slug`) and skills browser (`GET /skills`, `GET /skills/:id`)
+- [x] Publisher self-serve: register, draft listing, attach identity / capabilities, publish
+- [x] ERC-8004 identity card, sync, and API-key issuance (`/identities/*`)
+- [x] Session detail and revoke-by-session-id (`GET /wallets/sessions/:id`, `POST …/revoke`)
+- [x] Account profile from `GET /users/me` (today only the session handshake returns the user)
+
+### Leftover mock
+
+- [x] Remove unused mock command-center: `marketplace-mock.ts`, `plan-card.tsx`, `session-dashboard.tsx`, `clarifying-question.tsx`, `omn-input.tsx`, `suggestion-pills.tsx`, `top-nav.tsx`
+- [x] Remove unused wired composers: `IntentComposer`, `SignInPanel` (`/app` already superseded them)
 
 ---
 

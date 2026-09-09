@@ -162,3 +162,14 @@ export async function revokePlan<T>(plan: {
     }),
   });
 }
+
+/** On-chain revoke for a session row that is not tied to the current plan card. */
+export async function revokeSessionKey(sessionPublicKey: string) {
+  const altana = client();
+  const wallet = await altana.recoverFromPasskey({ rpId: rpId() });
+  return altana.revokeSession({
+    wallet,
+    signer: wallet.signer,
+    session: sessionPublicKey as `0x${string}`,
+  });
+}

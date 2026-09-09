@@ -24,13 +24,16 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "ts-node --project tsconfig.seed.json src/database/seed/run.ts"
+    "db:seed": "ts-node --project tsconfig.seed.json src/database/seed/run.ts",
+    "x402:provision-merchant": "ts-node --project tsconfig.scripts.json src/scripts/provision-x402-merchant.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.60",
     "@altananetwork/sdk": "^0.9.0",
     "@anthropic-ai/sdk": "^0.124.0",
     "@google/genai": "^2.21.0",
+    "@hpke/chacha20poly1305": "^1.8.0",
+    "@hpke/core": "^1.9.0",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",

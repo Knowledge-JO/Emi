@@ -1,44 +1,38 @@
 "use client";
 
 import { List } from "@phosphor-icons/react";
+
 import { WalletButton } from "./wallet-button";
-import type { Network } from "./sidebar";
 
-interface WorkspaceHeaderProps {
+type WorkspaceHeaderProps = {
   title: string;
-  network: Network;
-  onNetworkChange: (n: Network) => void;
   onMenuOpen: () => void;
-}
+};
 
-export function WorkspaceHeader({ title, network, onNetworkChange, onMenuOpen }: WorkspaceHeaderProps) {
-  const netLabel = network === "mainnet" ? "BSC Mainnet" : "BSC Testnet";
+export function WorkspaceHeader({ title, onMenuOpen }: WorkspaceHeaderProps) {
+  const chain = process.env.NEXT_PUBLIC_ALTANA_CHAIN ?? "bnb";
+  const netLabel =
+    chain === "bnb-testnet"
+      ? "BSC Testnet"
+      : chain === "ethereum"
+        ? "Ethereum"
+        : "BSC Mainnet";
+
   return (
-    <header className="flex items-center gap-4 h-14 px-4 md:px-6 border-b border-border bg-surface/40 shrink-0">
+    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-surface/40 px-4 md:px-6">
       <button
         onClick={onMenuOpen}
         aria-label="Open menu"
-        className="md:hidden p-1.5 -ml-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-deep transition-colors active:scale-95"
+        className="-ml-1 rounded-lg p-1.5 text-muted hover:bg-surface-deep hover:text-foreground md:hidden"
       >
         <List size={16} />
       </button>
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-xs text-muted hidden sm:inline font-mono">rill://</span>
-        <h1 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h1>
-      </div>
-
+      <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">{title}</h1>
       <div className="ml-auto flex items-center gap-2.5">
-        <button
-          onClick={() => onNetworkChange(network === "mainnet" ? "testnet" : "mainnet")}
-          className="flex items-center gap-2 h-9 px-3 rounded-full border border-border bg-surface text-xs font-mono text-foreground hover:border-[#3a424c] transition-colors active:scale-[0.97]"
-          title="Switch network"
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${network === "mainnet" ? "bg-success" : "bg-accent"}`}
-            aria-hidden
-          />
+        <span className="hidden h-9 items-center gap-2 rounded-full border border-border bg-surface px-3 font-mono text-xs text-foreground sm:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
           {netLabel}
-        </button>
+        </span>
         <WalletButton />
       </div>
     </header>

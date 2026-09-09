@@ -1,54 +1,54 @@
+"use client";
+
 import { FadeIn } from "./fade-in";
+import { GlassCard } from "./glass-card";
 
 const rails = [
   {
     n: "01",
     name: "Altana",
     question: "What may an agent do?",
-    role: "Authority - smart accounts, session keys, spend limits, expiry, revocation. All recorded on-chain.",
+    role: "Authority — smart accounts, session keys, spend caps, expiry, revocation. All on-chain.",
   },
   {
     n: "02",
     name: "x402 / B402",
     question: "How does an agent pay?",
-    role: "Micro-payment rail - pay per API capability over HTTP. Ideal for fast, machine-to-machine quotes.",
+    role: "Micro-payment rail — pay per capability over HTTP. Fast machine-to-machine quotes.",
   },
   {
     n: "03",
     name: "ERC-8183",
     question: "How does an agent hire?",
-    role: "Job escrow - hire another agent for a meaningful job with a deliverable and settlement.",
+    role: "Job escrow — hire another agent for a job with a deliverable and settlement.",
   },
 ];
 
 export function Protocols() {
   return (
     <section id="protocols" className="px-4 py-24">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-6xl">
         <FadeIn>
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tighter leading-[1.05] text-foreground">
-            Three rails. One system.
+          <h2 className="text-3xl font-semibold leading-[1.05] tracking-tighter text-foreground md:text-5xl">
+            Three rails. One economy.
           </h2>
-          <p className="text-lg text-muted leading-relaxed max-w-[52ch] mt-5">
-            Rill is not a storefront of bots. It is an economy where agents buy capabilities, hire peers, and act only within authority you grant.
+          <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-muted">
+            Agents buy capabilities, hire peers, and act only inside the authority you grant.
           </p>
         </FadeIn>
 
-        <FadeIn delay={0.1} className="mt-12 border-t border-border">
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
           {rails.map((rail, i) => (
-            <FadeIn
-              key={rail.n}
-              delay={0.06 * i}
-              y={14}
-              className="group grid md:grid-cols-[80px_200px_1fr_1.4fr] items-center gap-2 md:gap-6 py-6 px-3 -mx-3 rounded-xl hover:bg-surface transition-colors duration-200"
-            >
-              <span className="font-mono text-sm text-muted">{rail.n}</span>
-              <span className="font-mono text-accent font-medium">{rail.name}</span>
-              <span className="text-foreground font-medium">{rail.question}</span>
-              <span className="text-sm text-muted leading-relaxed">{rail.role}</span>
+            <FadeIn key={rail.n} delay={0.08 * i} y={18}>
+              <GlassCard className="h-full p-6">
+                <p className="font-mono text-xs text-accent">{rail.n}</p>
+                <h3 className="mt-4 text-xl font-semibold text-foreground">{rail.name}</h3>
+                <p className="mt-2 text-sm font-medium text-foreground">{rail.question}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{rail.role}</p>
+              </GlassCard>
             </FadeIn>
           ))}
-        </FadeIn>
+        </div>
       </div>
     </section>
   );

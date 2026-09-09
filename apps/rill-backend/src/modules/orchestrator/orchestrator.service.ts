@@ -111,7 +111,11 @@ export class OrchestratorService {
     @Inject(WORKFLOW_QUEUE) private readonly queue: WorkflowQueue,
   ) {}
 
-  async planForUser(userId: string, intentId: string): Promise<PlanResponse> {
+  async planForUser(
+    userId: string,
+    intentId: string,
+    selections?: Array<{ graphNodeId: string; agentId: string }>,
+  ): Promise<PlanResponse> {
     const intent = await this.db.query.intents.findFirst({
       where: eq(intents.id, intentId),
     });
@@ -142,10 +146,20 @@ export class OrchestratorService {
       where: eq(recommendations.intentId, intentId),
     });
 
-    const { selected, unmatched } = this.selection.pickRankOne(
+    const { selected, unmatched, invalid } = this.selection.pickRankOne(
       graph.map((node) => node.id),
       rows,
+      selections ?? [],
     );
+
+    if (invalid.length > 0) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        code: 'workflow_invalid_selection',
+        error: 'A selected agent is not a recommendation for that graph node',
+        details: { invalid },
+      });
+    }
 
     if (unmatched.length > 0) {
       throw new UnprocessableEntityException({

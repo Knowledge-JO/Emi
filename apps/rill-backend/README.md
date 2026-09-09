@@ -97,7 +97,8 @@ Copy the environment variables below into `.env`:
 | `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` | Temporal server for durable workflows |
 | `BSC_RPC_URL` | BNB Chain RPC endpoint |
 | `AGENT_PRIVATE_KEY` | Signer for platform-operated agent wallets. Stays in this process; Altana never sees it |
-| `X402_FACILITATOR_URL` | x402 payment facilitator |
+| `X402_FACILITATOR_URL` | x402 facilitator (`https://x402.dexter.cash` on BNB) |
+| `X402_MERCHANT_ADDRESS` | Altana smart account that receives inbound capability payments |
 | `ERC8183_ESCROW_ADDRESS` | Job escrow contract |
 | `ERC8004_REGISTRY_ADDRESS` | Agent identity registry |
 | `GEMINI_API_KEY`, `AI_PROVIDER`, `PLANNER_MODEL` | Chat model (Gemini via `@google/genai` by default) |
@@ -124,6 +125,7 @@ npm run build
 npm run lint
 npm run test
 npm run test:e2e
+npm run x402:provision-merchant   # Altana payTo + X402_FACILITATOR_URL in .env
 ```
 
 Database, via drizzle-kit:

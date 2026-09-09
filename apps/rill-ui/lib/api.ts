@@ -25,6 +25,7 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -61,7 +62,8 @@ export async function apiFetch<T>(
   const response = await fetch(`${apiUrl}${path}`, { ...init, headers });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await readError(response));
+    const parsed = await readError(response);
+    throw new ApiError(response.status, parsed.message, parsed.code);
   }
 
   return response.status === 204
@@ -69,17 +71,23 @@ export async function apiFetch<T>(
     : ((await response.json()) as T);
 }
 
-async function readError(response: Response): Promise<string> {
+async function readError(
+  response: Response,
+): Promise<{ message: string; code?: string }> {
   try {
     const body = (await response.json()) as {
       message?: string | string[];
       error?: string;
+      code?: string;
     };
     const message = Array.isArray(body.message)
       ? body.message.join(", ")
       : (body.message ?? body.error);
-    return message ?? response.statusText;
+    return {
+      message: message ?? response.statusText,
+      code: typeof body.code === "string" ? body.code : undefined,
+    };
   } catch {
-    return response.statusText;
+    return { message: response.statusText };
   }
 }

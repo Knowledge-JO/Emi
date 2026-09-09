@@ -1,258 +1,452 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { OmniInput } from "../components/omn-input";
-import { SuggestionPills } from "../components/suggestion-pills";
-import { PlanCard } from "../components/plan-card";
-import { ClarifyingQuestion } from "../components/clarifying-question";
-import { Sidebar, type Network, type HistoryEntry } from "../components/sidebar";
-import { WorkspaceHeader } from "../components/workspace-header";
-import { SessionDashboard, type LiveJob } from "../components/session-dashboard";
-import { CapabilityDirectory } from "../components/capability-directory";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+
+import { Composer } from "../components/chat/composer";
+import { Thread, type ChatMessage } from "../components/chat/thread";
+import { WorkspaceFrame } from "../components/workspace-shell";
+import { useWallet } from "../providers";
+import { grantPlan, revokePlan } from "@/lib/altana";
+import { NEW_CHAT, notifyWalletChanged, upsertChat } from "@/lib/chat-store";
+import { errorText } from "@/lib/format";
 import {
-  parseSwap,
-  planFor,
-  traceFor,
-  isMonitoringIntent,
-  swapQuestionFor,
-  swapChoicesFor,
-  swapResultFor,
-  type MarketPlan,
-  type JobReceipt,
-} from "../lib/marketplace-mock";
+  SUGGESTIONS,
+  createIntent,
+  createPlan,
+  defaultSelections,
+  executePlan,
+  getIntent,
+  getPlan,
+  planIsPending,
+  type IntentResponse,
+  type PlanResponse,
+} from "@/lib/rill";
+import { loadChats } from "@/lib/chat-store";
+import { useRillSession } from "@/lib/use-rill-session";
 
-type View = "intake" | "clarify" | "plan" | "session";
-
-function randomTxHash() {
-  return "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-}
-
-const TITLES: Record<View, string> = {
-  intake: "Command Center",
-  clarify: "Compile Intent",
-  plan: "Compile Intent",
-  session: "Active Session",
+type Conversation = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  intent: IntentResponse | null;
+  plan: PlanResponse | null;
+  selections: Record<string, string>;
 };
 
+function freshConversation(): Conversation {
+  return {
+    id: crypto.randomUUID(),
+    title: "New chat",
+    messages: [],
+    intent: null,
+    plan: null,
+    selections: {},
+  };
+}
+
 export default function AppHome() {
+  return (
+    <Suspense fallback={<div className="flex h-dvh items-center justify-center text-sm text-muted">Loading…</div>}>
+      <ChatHome />
+    </Suspense>
+  );
+}
+
+function ChatHome() {
+  const { enabled } = useWallet();
+  const session = useRillSession();
+  const userId = session.status === "verified" ? session.user.id : null;
+  const params = useSearchParams();
   const [input, setInput] = useState("");
-  const [view, setView] = useState<View>("intake");
-  const [intent, setIntent] = useState("");
-  const [plan, setPlan] = useState<MarketPlan | null>(null);
-  const [jobs, setJobs] = useState<LiveJob[]>([]);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sideOpen, setSideOpen] = useState(true);
-  const [network, setNetwork] = useState<Network>("mainnet");
-  const [capsOpen, setCapsOpen] = useState(false);
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const [busy, setBusy] = useState(false);
+  const [seed] = useState(freshConversation);
+  const [conversations, setConversations] = useState<Conversation[]>([seed]);
+  const [selectedId, setSelectedId] = useState(seed.id);
+  const [hydrated, setHydrated] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+
+  const current =
+    conversations.find((conversation) => conversation.id === selectedId) ??
+    conversations[0];
 
   useEffect(() => {
-    return () => timers.current.forEach((t) => clearTimeout(t));
+    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
+  }, [current?.messages.length, current?.plan?.execution.status]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const id = userId;
+    let cancelled = false;
+    async function hydrate() {
+      const stored = loadChats(id);
+      if (stored.length === 0) {
+        setHydrated(true);
+        return;
+      }
+      const restored: Conversation[] = [];
+      for (const row of stored) {
+        const conversation: Conversation = {
+          id: row.id,
+          title: row.title,
+          messages: [],
+          intent: null,
+          plan: null,
+          selections: row.selections,
+        };
+        try {
+          if (row.intentId) {
+            const intent = await getIntent(row.intentId);
+            conversation.intent = intent;
+            conversation.messages.push({
+              id: crypto.randomUUID(),
+              role: "user",
+              text: intent.rawText,
+            });
+            conversation.messages.push({
+              id: crypto.randomUUID(),
+              role: "assistant",
+              kind: "agents",
+              intent,
+            });
+          }
+          if (row.planId) {
+            const plan = await getPlan(row.planId);
+            conversation.plan = plan;
+            conversation.messages.push({
+              id: crypto.randomUUID(),
+              role: "assistant",
+              kind: "plan",
+              plan,
+            });
+          }
+        } catch {
+          // Stale ids are dropped from the reconstructed thread.
+        }
+        restored.push(conversation);
+      }
+      if (cancelled) return;
+      const pick = params.get("c");
+      setConversations(restored.length > 0 ? restored : [freshConversation()]);
+      setSelectedId(
+        pick && restored.some((row) => row.id === pick)
+          ? pick
+          : restored[0]?.id ?? seed.id,
+      );
+      setHydrated(true);
+    }
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    const onNew = () => {
+      const next = freshConversation();
+      setConversations((prev) => [next, ...prev]);
+      setSelectedId(next.id);
+      setInput("");
+    };
+    window.addEventListener(NEW_CHAT, onNew);
+    return () => window.removeEventListener(NEW_CHAT, onNew);
   }, []);
 
-  const submitIntent = (text: string) => {
-    setInput(text);
-    setIntent(text);
-    const swap = parseSwap(text);
-    if (swap && !swap.amount) {
-      setView("clarify");
-    } else {
-      setPlan(planFor(text));
-      setView("plan");
-    }
-  };
+  useEffect(() => {
+    const pick = params.get("c");
+    if (pick) setSelectedId(pick);
+  }, [params]);
 
-  const handleClarify = (choice: { id: string; amount: string }) => {
-    const swap = parseSwap(intent);
-    const amount = choice.amount.split(" · ")[0];
-    const to = swap?.to ?? "USDT";
-    const full = `Swap ${amount} for ${to}`;
-    setIntent(full);
-    setPlan(planFor(full, choice.amount));
-    setView("plan");
-  };
+  useEffect(() => {
+    if (!userId || !current) return;
+    if (!current.intent && current.messages.length === 0) return;
+    upsertChat(userId, {
+      id: current.id,
+      title: current.title,
+      intentId: current.intent?.id ?? null,
+      planId: current.plan?.id ?? null,
+      selections: current.selections,
+      updatedAt: Date.now(),
+    });
+  }, [userId, current]);
 
-  const finalizeJob = (job: LiveJob) => {
-    const txHash = randomTxHash();
-    const result = swapResultFor(job.intent);
-    const receipt: JobReceipt = {
-      txHash,
-      actualCost: job.plan.cost.quoted,
-      quotedCost: job.plan.cost.quoted,
-      gas: job.plan.cost.gas,
-      explorerUrl: `https://bscscan.com/tx/${txHash}`,
-      result,
+  useEffect(() => {
+    if (!current?.plan || !planIsPending(current.plan)) return;
+    const planId = current.plan.id;
+    const conversationId = current.id;
+    let cancelled = false;
+    const interval = window.setInterval(() => {
+      void getPlan(planId).then((plan) => {
+        if (cancelled) return;
+        patch(conversationId, (conversation) => ({
+          ...conversation,
+          plan,
+          messages: upsertPlan(conversation.messages, plan),
+        }));
+      });
+    }, current.plan.engine === "temporal" ? 4000 : 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
     };
-    setJobs((prev) =>
-      prev.map((j) => (j.id === job.id ? { ...j, progress: j.steps.length, status: "done", receipt } : j))
+  }, [current?.id, current?.plan?.id, current?.plan?.engine, current?.plan?.execution.status, current?.plan?.status]);
+
+  function patch(id: string, updater: (conversation: Conversation) => Conversation) {
+    setConversations((prev) =>
+      prev.map((conversation) => (conversation.id === id ? updater(conversation) : conversation)),
     );
-    setHistory((prev) => [
-      { id: job.id, action: `${job.intent} - executed`, txHash, timestamp: "just now", tag: "executed" },
-      ...prev,
-    ]);
-    timers.current.delete(job.id);
-  };
+  }
 
-  const startJobTimers = (job: LiveJob) => {
-    let step = 0;
-    const tick = () => {
-      step += 1;
-      if (job.monitoring && step >= job.steps.length - 1) {
-        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, progress: job.steps.length - 1 } : j)));
-        timers.current.delete(job.id);
-        return;
-      }
-      if (!job.monitoring && step >= job.steps.length) {
-        finalizeJob(job);
-        return;
-      }
-      setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, progress: step } : j)));
-      timers.current.set(job.id, setTimeout(tick, 1350));
-    };
-    timers.current.set(job.id, setTimeout(tick, 1350));
-  };
-
-  const handleApprove = () => {
-    if (!plan) return;
-    const snapshot = plan;
-    const id = Math.random().toString(36).slice(2);
-    const job: LiveJob = {
-      id,
-      intent: snapshot.intent,
-      plan: snapshot,
-      steps: traceFor(snapshot.intent),
-      progress: 0,
-      status: "running",
-      monitoring: isMonitoringIntent(snapshot.intent),
-      healthFactor: isMonitoringIntent(snapshot.intent) ? "1.31" : undefined,
-      updatedAt: "just now",
-    };
-    setJobs((prev) => [job, ...prev]);
-    setSelectedId(id);
-    setView("session");
+  async function submit(text: string) {
+    if (!enabled) return;
+    const conversationId = current?.id ?? startAndReturnId();
     setInput("");
-    setSideOpen(false);
-    startJobTimers(job);
-  };
+    setBusy(true);
 
-  const handleRevoke = (id: string) => {
-    const target = jobs.find((j) => j.id === id);
-    const t = timers.current.get(id);
-    if (t) clearTimeout(t);
-    timers.current.delete(id);
-    if (target) {
-      setHistory((prev) => [
-        {
-          id,
-          action: `${target.intent} - authority revoked`,
-          txHash: randomTxHash(),
-          timestamp: "just now",
-          tag: "revoked",
-        },
-        ...prev,
-      ]);
+    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", text };
+    const statusId = crypto.randomUUID();
+
+    patch(conversationId, (conversation) => ({
+      ...conversation,
+      title: text.length > 48 ? `${text.slice(0, 45)}…` : text,
+      intent: null,
+      plan: null,
+      selections: {},
+      messages: [
+        ...conversation.messages,
+        userMessage,
+        { id: statusId, role: "assistant", kind: "status", text: "Matching agents…" },
+      ],
+    }));
+
+    try {
+      const intent = await createIntent(text);
+      patch(conversationId, (conversation) => ({
+        ...conversation,
+        intent,
+        selections: defaultSelections(intent.matches),
+        messages: replaceMessage(conversation.messages, statusId, {
+          id: statusId,
+          role: "assistant",
+          kind: "agents",
+          intent,
+        }),
+      }));
+    } catch (error) {
+      patch(conversationId, (conversation) => ({
+        ...conversation,
+        messages: replaceMessage(conversation.messages, statusId, {
+          id: statusId,
+          role: "assistant",
+          kind: "error",
+          text: errorText(error),
+        }),
+      }));
+    } finally {
+      setBusy(false);
     }
-    setJobs((prev) => prev.filter((j) => j.id !== id));
-    if (selectedId === id) {
-      setSelectedId(null);
-      setView("intake");
+  }
+
+  function startAndReturnId() {
+    const next = freshConversation();
+    setConversations((prev) => [next, ...prev]);
+    setSelectedId(next.id);
+    return next.id;
+  }
+
+  function selectAgent(graphNodeId: string, agentId: string) {
+    if (!current) return;
+    patch(current.id, (conversation) => ({
+      ...conversation,
+      selections: { ...conversation.selections, [graphNodeId]: agentId },
+    }));
+  }
+
+  async function continueToPlan() {
+    if (!current?.intent || current.intent.matches.length === 0) return;
+    setBusy(true);
+    const statusId = crypto.randomUUID();
+    patch(current.id, (conversation) => ({
+      ...conversation,
+      messages: [
+        ...conversation.messages,
+        { id: statusId, role: "assistant", kind: "status", text: "Building the authorization plan…" },
+      ],
+    }));
+    try {
+      const plan = await createPlan(current.intent.id, current.selections);
+      patch(current.id, (conversation) => ({
+        ...conversation,
+        plan,
+        messages: replaceMessage(conversation.messages, statusId, {
+          id: statusId,
+          role: "assistant",
+          kind: "plan",
+          plan,
+        }),
+      }));
+    } catch (error) {
+      patch(current.id, (conversation) => ({
+        ...conversation,
+        messages: replaceMessage(conversation.messages, statusId, {
+          id: statusId,
+          role: "assistant",
+          kind: "error",
+          text: errorText(error),
+        }),
+      }));
+    } finally {
+      setBusy(false);
     }
-  };
+  }
 
-  const handleBack = () => {
-    setView("intake");
-    setInput("");
-    setIntent("");
-    setPlan(null);
-  };
+  async function approve() {
+    if (!current?.plan) return;
+    setBusy(true);
+    try {
+      const plan = await grantPlan<PlanResponse>(current.plan);
+      patch(current.id, (conversation) => ({
+        ...conversation,
+        plan,
+        messages: upsertPlan(conversation.messages, plan),
+      }));
+      notifyWalletChanged();
+    } catch (error) {
+      appendError(current.id, errorText(error));
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  const selectSession = (id: string) => {
-    setSelectedId(id);
-    setView("session");
-    setSideOpen(false);
-  };
+  async function run() {
+    if (!current?.plan) return;
+    setBusy(true);
+    try {
+      const plan = await executePlan(current.plan.id);
+      patch(current.id, (conversation) => ({
+        ...conversation,
+        plan,
+        messages: upsertPlan(conversation.messages, plan),
+      }));
+      notifyWalletChanged();
+      if (plan.execution.status === "failed") {
+        appendError(current.id, plan.execution.error ?? "Execution failed");
+      }
+    } catch (error) {
+      appendError(current.id, errorText(error));
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  const selectedJob = selectedId ? jobs.find((j) => j.id === selectedId) ?? null : null;
-  const swap = parseSwap(intent);
-  const guards = jobs.filter((j) => j.status === "running");
-  const done = jobs.filter((j) => j.status === "done");
+  async function revoke() {
+    if (!current?.plan?.sessionPublicKey) return;
+    setBusy(true);
+    try {
+      const plan = await revokePlan<PlanResponse>({
+        id: current.plan.id,
+        sessionPublicKey: current.plan.sessionPublicKey,
+      });
+      patch(current.id, (conversation) => ({
+        ...conversation,
+        plan,
+        messages: upsertPlan(conversation.messages, plan),
+      }));
+    } catch (error) {
+      appendError(current.id, errorText(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function appendError(id: string, text: string) {
+    patch(id, (conversation) => ({
+      ...conversation,
+      messages: [
+        ...conversation.messages,
+        { id: crypto.randomUUID(), role: "assistant", kind: "error", text },
+      ],
+    }));
+  }
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden">
-      <Sidebar
-        open={sideOpen}
-        onToggle={() => setSideOpen((o) => !o)}
-        guards={guards}
-        done={done}
-        recents={history}
-        selectedId={selectedId}
-        network={network}
-        onNetworkChange={(n) => {
-          setNetwork(n);
-          setView("intake");
-        }}
-        onNewIntent={handleBack}
-        onSelectSession={selectSession}
-        onOpenCapabilities={() => setCapsOpen(true)}
-        onCloseMobile={() => setSideOpen(false)}
-      />
-
-      <div className="flex flex-1 flex-col min-w-0">
-        <WorkspaceHeader
-          title={TITLES[view]}
-          network={network}
-          onNetworkChange={setNetwork}
-          onMenuOpen={() => setSideOpen(true)}
-        />
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[820px] px-4 md:px-6 pb-24">
-            <motion.div
-              layout
-              className={`flex flex-col ${view === "intake" && jobs.length === 0 ? "pt-10 md:pt-16" : "pt-6 md:pt-8"}`}
-              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-            >
-              <AnimatePresence mode="wait">
-                {view === "intake" && (
-                  <motion.div key="intake" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <OmniInput value={input} onChange={setInput} onSubmit={submitIntent} />
-                    <SuggestionPills onSelect={submitIntent} />
-                  </motion.div>
-                )}
-
-                {view === "clarify" && (
-                  <motion.div key="clarify" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <ClarifyingQuestion
-                      intent={intent}
-                      question={swapQuestionFor(swap?.from ?? "USDT", swap?.to ?? "BNB")}
-                      choices={swapChoicesFor(swap?.from ?? "USDT")}
-                      onAnswer={handleClarify}
-                      onEdit={() => {}}
-                      onBack={handleBack}
-                    />
-                  </motion.div>
-                )}
-
-                {view === "plan" && plan && (
-                  <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <PlanCard plan={plan} intent={intent} onApprove={handleApprove} onBack={handleBack} />
-                  </motion.div>
-                )}
-
-                {view === "session" && selectedJob && (
-                  <motion.div key="session" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <SessionDashboard job={selectedJob} onBack={handleBack} onRevoke={handleRevoke} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </div>
+    <WorkspaceFrame title={current?.title || "Rill"}>
+      <div ref={scroller} className="flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-4 pb-6 pt-8 md:px-6">
+          {!hydrated ? (
+            <p className="m-auto text-sm text-muted">Restoring chats…</p>
+          ) : !current || current.messages.length === 0 ? (
+            <EmptyState onPick={submit} />
+          ) : (
+            <Thread
+              messages={current.messages}
+              selections={current.selections}
+              busy={busy}
+              onSelectAgent={selectAgent}
+              onContinue={() => void continueToPlan()}
+              onApprove={() => void approve()}
+              onRun={() => void run()}
+              onRevoke={() => void revoke()}
+            />
+          )}
         </div>
       </div>
+      <div className="border-t border-border bg-background/80 px-4 py-3 md:px-6">
+        <div className="mx-auto w-full max-w-[760px]">
+          <Composer
+            value={input}
+            disabled={busy}
+            placeholder="Describe an outcome on BNB Chain…"
+            onChange={setInput}
+            onSubmit={(text) => void submit(text)}
+          />
+        </div>
+      </div>
+    </WorkspaceFrame>
+  );
+}
 
-      <CapabilityDirectory open={capsOpen} onClose={() => setCapsOpen(false)} />
+function EmptyState({ onPick }: { onPick: (text: string) => void }) {
+  return (
+    <div className="m-auto flex max-w-lg flex-col items-center text-center">
+      <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        What should happen on-chain?
+      </h2>
+      <p className="mt-2 text-sm text-muted">
+        Send an outcome. If more than one agent can do it, you pick. Then review the session and run.
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        {SUGGESTIONS.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            onClick={() => onPick(suggestion)}
+            className="rounded-full border border-border px-3.5 py-1.5 text-sm text-muted hover:border-accent/40 hover:text-foreground"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
     </div>
   );
+}
+
+function replaceMessage(messages: ChatMessage[], id: string, next: ChatMessage): ChatMessage[] {
+  return messages.map((message) => (message.id === id ? next : message));
+}
+
+function upsertPlan(messages: ChatMessage[], plan: PlanResponse): ChatMessage[] {
+  const index = messages.findIndex(
+    (message) => message.role === "assistant" && message.kind === "plan",
+  );
+  const next: ChatMessage = {
+    id: index >= 0 && messages[index] ? messages[index].id : crypto.randomUUID(),
+    role: "assistant",
+    kind: "plan",
+    plan,
+  };
+  if (index >= 0) {
+    return messages.map((message, i) => (i === index ? next : message));
+  }
+  return [...messages, next];
 }

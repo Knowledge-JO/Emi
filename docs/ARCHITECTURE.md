@@ -845,8 +845,7 @@ itself enforces.
 ```text
 browser                              rill-backend
 ───────                              ────────────
-Privy login (email, OAuth,
-wallet, passkey)
+Privy login (Google, Apple, email)
    │
    └─▶ access token (ES256 JWT) ──▶  PrivyAuthGuard
                                      verifies signature, audience, expiry
@@ -892,6 +891,9 @@ token costs the user an email address on their profile, not their sign-in.
 
 The handshake is explicit rather than implicit on first read, so account creation is an action with
 an event behind it instead of a side effect of an arbitrary `GET`.
+
+The web app signs humans in at `/signin` with Google, Apple, or email only. Wallet login is off;
+Privy does not create an embedded wallet. `/app` redirects unsigned visitors to that page.
 
 ### 19.4 Two credentials, two questions
 
@@ -1106,7 +1108,9 @@ npm run db:migrate    # from apps/rill-backend
 npm run db:seed
 ```
 
-Then `POST /intents` with that message. The UI "Find agents" control is the same call.
+Then `POST /intents` with that message. The `/app` chat composer is that call: the user
+sends a message, sees ranked matches, picks an agent when a node has more than one, then
+continues into the plan.
 
 ### 21.7 Explicitly not this slice
 
@@ -1142,8 +1146,10 @@ authorization_plan
 UI "Review plan"     granted: false
 ```
 
-`POST /orchestrator/plans` `{ intentId }` does this. `GET /orchestrator/plans/:id` re-reads it.
-A second POST for the same intent returns the existing `awaiting_authorization` row.
+`POST /orchestrator/plans` `{ intentId, selections? }` does this. `selections` is
+`{ graphNodeId, agentId }[]` — the agent must already be a recommendation for that node.
+Omit it and rank 1 wins. `GET /orchestrator/plans/:id` re-reads it. A second POST for the
+same intent returns the existing `awaiting_authorization` row.
 
 The spend cap is exact `numeric` math: `"5"` at 18 decimals is `5000000000000000000`, plus 50 bps
 is `5025000000000000000`. A float never touches it.
@@ -1464,7 +1470,10 @@ Inbound: missing header → HTTP 402 with a v2 challenge (`eip155:<chain>`, `$U`
 `permit2-exact`). A present header is checked against payTo / asset / amount /
 resource, then the facilitator `verify` + `settle`s it. Signatures are ERC-1271
 through the facilitator, never `ecrecover`. The capability result is returned only
-after settlement is recorded on `x402_payments`.
+after settlement is recorded on `x402_payments`. `payTo` is `X402_MERCHANT_ADDRESS`
+— an Altana smart account created by `npm run x402:provision-merchant` (admin key
+under `.secrets/merchant/`, never Postgres). `X402_FACILITATOR_URL` is the HTTP
+settler (`https://x402.dexter.cash` on BNB); it is not the Altana in-process EOA.
 
 ```text
 session (user or agent)
@@ -1669,3 +1678,33 @@ against the `canSubcontract` listing (Loan Guardian), not the first DAG node (To
 
 SwapMaster as a worker still needs an agent wallet to receive escrow. Missing wallet is
 `hired: false` / `worker_wallet_missing` — the compose event still lands.
+
+---
+
+## 36. Web app surfaces
+
+The Next.js app is identity (Privy) plus the marketplace UI. It never constructs an Altana
+signer except in the browser passkey path (`grantSession` / `revokeSession`). Landing (`/`) is
+marketing. Product routes live under `/app` and call the Nest API:
+
+| Route | API |
+|-------|-----|
+| `/signin` | `POST /auth/session` |
+| `/app` chat | `POST /intents`, `GET /intents/:id`, `POST/GET /orchestrator/plans`, grant, execute, revoke |
+| `/app/account` | `GET /users/me`, `GET /wallets/me`, `GET /wallets/me/balances` |
+| `/app/sessions/:id` | `GET /wallets/sessions/:id`, passkey revoke, `POST …/revoke` |
+| `/app/agents`, `/app/agents/:slug` | `GET /marketplace/agents`, `GET /marketplace/agents/:slug` |
+| `/app/skills`, `/app/skills/:id` | `GET /skills`, `GET /skills/:id` |
+| `/app/jobs`, `/app/jobs/:id` | ERC-8183 lifecycle on `/jobs/*` |
+| `/app/payments` | `GET /x402/payments`, `POST /x402/fetch` |
+| `/app/publisher` | `/marketplace/publishers`, listing draft → identity → capability → publish |
+| `/app/identities/:slug` | `GET /identities/:slug`, sync, issue `rill_ak_…` |
+
+Chat threads persist intent and plan ids in `localStorage` (there is no list-intents API).
+Refresh rehydrates with `GET /intents/:id` and `GET /orchestrator/plans/:id`. Temporal plans
+keep polling while `execution.status = running` or `status = running`; they are not capped at
+~60s. Sign-out is `DELETE /auth/session` then Privy logout.
+
+The sidebar wallet pill is the Altana passkey address from `GET /wallets/me`, not a Privy
+embedded wallet (those stay off).
+
