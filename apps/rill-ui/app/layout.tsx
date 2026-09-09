@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rill - Intent-driven DeFi on BNB Chain",
+  title: "Emi - Intent-driven DeFi on BNB Chain",
   description:
-    "Describe an outcome on BNB Chain. Rill compiles it into a bounded agent workflow and executes it securely.",
+    "Describe an outcome on BNB Chain. Emi compiles it into a bounded agent workflow and executes it securely.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

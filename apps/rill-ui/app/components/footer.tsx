@@ -6,7 +6,7 @@ export function Footer() {
       <div className="glass-thin mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-4 rounded-3xl px-5 py-5 md:flex-row md:items-center">
         <div className="flex items-center gap-3">
           <Link href="/" className="text-sm font-semibold tracking-tight text-accent">
-            Rill
+            Emi
           </Link>
           <span className="text-xs text-muted">Intent-driven DeFi on BNB Chain</span>
         </div>

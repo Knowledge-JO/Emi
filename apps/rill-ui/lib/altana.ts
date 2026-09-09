@@ -84,7 +84,7 @@ export async function ensurePasskeyWallet(): Promise<WalletResponse> {
     wallet = await altana.recoverFromPasskey({ rpId: rpId() });
   } catch {
     wallet = await altana.createPasskeyWallet({
-      name: "Rill",
+      name: "Emi",
       rpId: rpId(),
     });
   }

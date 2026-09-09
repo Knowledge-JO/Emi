@@ -1,6 +1,6 @@
 export const PERMIT2_ADDRESS = '0x000000000022d473030f116ddee9f6b43ac78ba3';
 
-/** 0.01 $U (18 decimals). Same price for Rill's first paid capabilities. */
+/** 0.01 $U (18 decimals). Same price for Emi's first paid capabilities. */
 export const QUOTE_PRICE = '10000000000000000';
 
 const SETTLEMENT_TOKEN: Record<56 | 97, string> = {

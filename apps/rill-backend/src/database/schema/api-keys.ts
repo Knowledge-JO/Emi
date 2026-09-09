@@ -16,7 +16,7 @@ import { apiKeyStatus, principalKind } from './enums';
 import { users } from './users';
 
 /**
- * Credentials for calling the Rill API: dashboard tokens for users, server-to-server keys for
+ * Credentials for calling the Emi API: dashboard tokens for users, server-to-server keys for
  * agents that buy our x402 capabilities. Only the digest is stored, so a database leak cannot
  * be replayed as a caller.
  */

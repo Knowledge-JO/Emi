@@ -20,9 +20,9 @@ type Handshake = {
 };
 
 /**
- * Bridges a Privy login to a Rill account.
+ * Bridges a Privy login to an Emi account.
  *
- * Being logged in with Privy is not the same as being known to Rill: the backend has to verify
+ * Being logged in with Privy is not the same as being known to Emi: the backend has to verify
  * the token itself before it will act for this user. That handshake happens here, once per login,
  * and its result — not Privy's client-side state — is what the app should trust.
  */

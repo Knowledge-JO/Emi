@@ -1,6 +1,6 @@
 # rill-backend
 
-The NestJS API and orchestrator behind [Rill](../../README.md). It turns a user's stated outcome
+The NestJS API and orchestrator behind [Emi](../../README.md). It turns a user's stated outcome
 into a planned workflow, hires agents to carry it out, and executes the result on BNB Chain under
 bounded, revocable authority.
 

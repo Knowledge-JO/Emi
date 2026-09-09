@@ -22,7 +22,7 @@ export type PrivyProfile = {
 };
 
 /**
- * The seam between Rill and Privy, declared as an abstract class so it doubles as an injection
+ * The seam between Emi and Privy, declared as an abstract class so it doubles as an injection
  * token. `PrivyVerifierService` is the only implementation, and the only file in the backend that
  * imports the Privy SDK — which keeps that ESM-only dependency out of every other module's
  * import graph, tests included.

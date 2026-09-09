@@ -4,7 +4,7 @@ import { KeystoreService } from './keystore.service';
 
 /**
  * Third-party verification of on-chain authority. Public on purpose: a wallet that has never
- * heard of Rill can still check `isValidKey`. Writes stay in WalletModule.
+ * heard of Emi can still check `isValidKey`. Writes stay in WalletModule.
  */
 @Controller('chain')
 export class ChainController {

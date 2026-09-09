@@ -78,7 +78,7 @@ export const envSchema = z.object({
     .transform((value) => value.replace(/\\n/g, '\n')),
 
   X402_FACILITATOR_URL: z.url(),
-  /** The address agents pay when Rill itself is the x402 merchant. */
+  /** The address agents pay when Emi itself is the x402 merchant. */
   X402_MERCHANT_ADDRESS: evmAddress,
 
   ERC8183_ESCROW_ADDRESS: evmAddress,

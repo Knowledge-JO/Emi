@@ -20,7 +20,7 @@ export async function seedCatalog(db: SeedDb): Promise<void> {
     .insert(users)
     .values({
       id: CATALOG_IDS.platformUser,
-      displayName: 'Rill',
+      displayName: 'Emi',
       authProvider: 'oauth',
       externalAuthId: 'rill:platform',
       status: 'active',
@@ -35,7 +35,7 @@ export async function seedCatalog(db: SeedDb): Promise<void> {
       id: CATALOG_IDS.platformDeveloper,
       userId: CATALOG_IDS.platformUser,
       slug: 'rill',
-      displayName: 'Rill',
+      displayName: 'Emi',
       description: 'First-party publisher of reference agents.',
       verification: 'verified',
       verifiedAt: new Date(),

@@ -370,7 +370,7 @@ function ChatHome() {
   }
 
   return (
-    <WorkspaceFrame title={current?.title || "Rill"}>
+    <WorkspaceFrame title={current?.title || "Emi"}>
       <div ref={scroller} className="flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-4 pb-6 pt-8 md:px-6">
           {!hydrated ? (

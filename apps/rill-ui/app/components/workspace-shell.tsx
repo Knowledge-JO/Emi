@@ -36,7 +36,7 @@ function VerifiedGate({ children }: { children: ReactNode }) {
   if (session.status === "loading" || session.status === "verifying") {
     return (
       <div className="flex h-dvh items-center justify-center text-sm text-muted">
-        Connecting to Rill…
+        Connecting to Emi…
       </div>
     );
   }

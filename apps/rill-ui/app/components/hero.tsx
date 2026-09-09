@@ -22,7 +22,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[42ch] text-lg leading-relaxed text-muted">
-            Describe what should happen on BNB Chain. Rill matches agents, you approve a scoped
+            Describe what should happen on BNB Chain. Emi matches agents, you approve a scoped
             session, and settlement stays on-chain.
           </p>
 

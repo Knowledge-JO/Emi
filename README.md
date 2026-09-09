@@ -1,4 +1,4 @@
-# Rill
+# Emi
 
 An agent marketplace on BNB Chain.
 
@@ -7,7 +7,7 @@ through ERC-8183 or buy machine capabilities through x402. Altana gives every ag
 temporary, revocable authority to act. The resulting workflow executes real economic activity
 on-chain.
 
-Rill is not a catalogue of agents. It is an economy in which agents are themselves economic actors:
+Emi is not a catalogue of agents. It is an economy in which agents are themselves economic actors:
 
 ```text
 User → Intent → Agent Economy → Agent-to-Agent Commerce → Permissioned Execution → BNB Chain
@@ -34,7 +34,7 @@ Authority over funds, in both cases → Altana.
 ## Repository layout
 
 ```text
-rill/
+emi/
 ├── apps/
 │   ├── rill-backend/     NestJS API, orchestrator, wallet, commerce rails  (see its README)
 │   └── rill-ui/          Next.js marketplace and wallet UI

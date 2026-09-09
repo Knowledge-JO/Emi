@@ -33,7 +33,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Calls the Rill API as the signed-in user.
+ * Calls the Emi API as the signed-in user.
  *
  * `getAccessToken` refreshes the token when it is close to expiring, so this is the only place
  * that needs to think about token lifetime. The identity token rides along because the backend

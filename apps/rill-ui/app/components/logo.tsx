@@ -16,29 +16,33 @@ export function Logo({ withText = true, size = 20, className = "" }: LogoProps) 
         fill="none"
       >
         <path
-          d="M5.5 4 V21"
+          d="M7.5 5 V23"
           stroke="currentColor"
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M5.5 4 H13 C18 4 19.5 8.5 19.5 10.8 C19.5 14.2 16.5 16.2 12.5 16.2 H5.5"
+          d="M7.5 5 H20.5"
           stroke="currentColor"
           strokeWidth="2.2"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
         <path
-          d="M12.5 16.2 L19.5 21.5"
+          d="M7.5 14 H17"
           stroke="currentColor"
           strokeWidth="2.2"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
-        <circle cx="20.9" cy="22.9" r="1.9" fill="currentColor" />
+        <path
+          d="M7.5 23 H20.5"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <circle cx="21.2" cy="14" r="1.9" fill="currentColor" />
       </svg>
-      {withText && <span className="text-base font-semibold tracking-tight text-foreground">Rill</span>}
+      {withText && <span className="text-base font-semibold tracking-tight text-foreground">Emi</span>}
     </span>
   );
 }

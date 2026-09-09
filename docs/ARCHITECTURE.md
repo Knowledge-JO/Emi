@@ -1,11 +1,11 @@
-# Rill — Agent Marketplace Architecture
+# Emi — Agent Marketplace Architecture
 
 > **A user describes an outcome. The marketplace finds the best agents. Agents can hire other agents
 > through ERC-8183 or purchase machine capabilities through x402. Altana gives every agent bounded,
 > temporary, revocable authority to act. The resulting workflow executes real economic activity on
 > BNB Chain.**
 
-Rill is not `Marketplace → Agent → Blockchain`. It is:
+Emi is not `Marketplace → Agent → Blockchain`. It is:
 
 ```text
 User → Intent → Agent Economy → Agent-to-Agent Commerce → Permissioned Execution → BNB Chain
@@ -145,7 +145,7 @@ deliverable → **ERC-8183**. Never create an escrow job for a single API reques
 
 ---
 
-## 3. Rill is an agent economy, not an agent store
+## 3. Emi is an agent economy, not an agent store
 
 ```text
 USER
@@ -612,13 +612,13 @@ START → Monitor → Wait → Check
 
 ---
 
-## 15. Rill as an x402 merchant
+## 15. Emi as an x402 merchant
 
 The platform monetizes its own capabilities: `/quote`, `/risk-analysis`, `/pool-analysis`,
 `/portfolio-analysis`.
 
 ```text
-Agent ──HTTP──▶ Rill API ──▶ x402 Guard
+Agent ──HTTP──▶ Emi API ──▶ x402 Guard
                               ├── Payment valid?
                               ├── Amount valid?
                               └── Settlement valid?
@@ -1175,7 +1175,7 @@ A skill is a public playbook from the [Altana Skills Registry](https://github.co
 sequence of calls for each common action. It cannot grant anything. An agent holding
 `pancakeswap-trading` and no session can do exactly nothing.
 
-Rill does not vendor the playbook. `SkillRegistryService` keeps the skill id, the published
+Emi does not vendor the playbook. `SkillRegistryService` keeps the skill id, the published
 may / may-not scope, the address table, and the session **call** targets. The live file lives
 upstream; grant-time should re-read `index.json` once execution exists.
 

@@ -10,7 +10,7 @@ import { UsersService, type UserRecord } from '../users/users.service';
 import { PrivyIdentity, type PrivyPrincipal } from './privy-identity.interface';
 
 /**
- * Turns a verified Privy caller into a Rill account.
+ * Turns a verified Privy caller into an Emi account.
  *
  * The distinction this module exists to keep: a platform token says "who is calling the API", an
  * Altana session says "what may be signed on-chain". Nothing here grants the second.

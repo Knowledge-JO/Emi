@@ -13,7 +13,7 @@ export function ProductPreview() {
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
         <span className="h-2.5 w-2.5 rounded-full bg-accent/70" />
-        <span className="ml-3 font-mono text-[11px] text-muted">rill.app · chat</span>
+        <span className="ml-3 font-mono text-[11px] text-muted">emi.app · chat</span>
       </div>
 
       <div className="space-y-3 p-5">

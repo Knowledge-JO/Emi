@@ -20,7 +20,7 @@ const LISTING = {
   developer: {
     userId: 'user-1',
     slug: 'rill',
-    displayName: 'Rill',
+    displayName: 'Emi',
     verification: 'verified',
   },
   identity: {

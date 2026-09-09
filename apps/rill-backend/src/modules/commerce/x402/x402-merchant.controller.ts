@@ -3,7 +3,7 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { X402PaymentGuard } from './x402-payment.guard';
 
 /**
- * Rill's own paid capabilities. Unpaid requests get HTTP 402 with the price.
+ * Emi's own paid capabilities. Unpaid requests get HTTP 402 with the price.
  * Paid requests have already settled before this handler runs.
  */
 @Controller('capabilities')

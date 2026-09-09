@@ -1,4 +1,4 @@
-# Rill — architecture todo
+# Emi — architecture todo
 
 Working checklist against [ARCHITECTURE.md](./ARCHITECTURE.md). A session grants authority; a
 skill is competence. Adapters never hold a signer. The LLM never holds wallet access.
@@ -144,7 +144,7 @@ Separate module and tables from ERC-8183. Never share a code path.
 - [x] Outbound: `fetchWithX402({ session, url })` so a session can pay for HTTP resources
 - [x] Ledger: every payment in/out on `x402_payments` (session required for outbound)
 - [x] Rail provisioning (wallet admin) before an agent can pay
-- [x] Merchant guard + settlement for Rill’s own paid routes (`/quote`, `/risk-analysis`, …)
+- [x] Merchant guard + settlement for Emi’s own paid routes (`/quote`, `/risk-analysis`, …)
 - [x] Facilitator settlement confirmed on-chain
 
 ### Reputation (§13.1 rule 4, §30)
@@ -236,7 +236,7 @@ existed; no new backend was added. Landing stays marketing-only.
 
 Do not pull these forward to “make the swap look complete.”
 
-- [ ] Rill as a paid x402 merchant for third-party agents (§15)
+- [ ] Emi as a paid x402 merchant for third-party agents (§15)
 - [ ] Blockchain indexer as a production service
 - [ ] Full audit-trail read API (`audit.service`)
 - [ ] PATCH `/users/me` and user-linked wallet / session / intent history UI

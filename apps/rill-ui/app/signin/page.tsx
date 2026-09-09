@@ -55,7 +55,7 @@ function AuthenticatedSignIn({ next }: { next: string }) {
     return (
       <Shell>
         <p className="text-sm text-muted">
-          {session.status === "verifying" ? "Creating your Rill account…" : "Loading…"}
+          {session.status === "verifying" ? "Creating your Emi account…" : "Loading…"}
         </p>
       </Shell>
     );
@@ -88,7 +88,7 @@ function AuthenticatedSignIn({ next }: { next: string }) {
   return (
     <Shell>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Sign in to Rill
+        Sign in to Emi
       </h1>
       <p className="mt-2 text-sm text-muted">
         Use Google, Apple, or email. On-chain authority still comes from a session you approve

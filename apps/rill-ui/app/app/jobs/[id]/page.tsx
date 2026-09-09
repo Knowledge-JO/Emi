@@ -98,7 +98,7 @@ export default function JobDetailPage() {
               disabled={busy}
               className="btn btn-ghost h-9 px-3"
               onClick={() =>
-                void run(() => deliverJob(job.id, { note: "delivered from rill ui" }))
+                void run(() => deliverJob(job.id, { note: "delivered from emi ui" }))
               }
             >
               Deliver
