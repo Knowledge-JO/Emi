@@ -1,38 +1,93 @@
 "use client";
 
-import { PrivyProvider } from "@privy-io/react-auth";
+import { createContext, useContext, type ReactNode } from "react";
+import {
+  PrivyProvider,
+  usePrivy,
+  useLogin,
+  useLogout,
+  useWallets,
+} from "@privy-io/react-auth";
+import { bsc } from "viem/chains";
+
+interface WalletState {
+  enabled: boolean;
+  ready: boolean;
+  authenticated: boolean;
+  address?: string;
+  login: () => void;
+  logout: () => void;
+}
+
+const WalletContext = createContext<WalletState>({
+  enabled: false,
+  ready: true,
+  authenticated: false,
+  login: () => {},
+  logout: () => {},
+});
+
+export function useWallet() {
+  return useContext(WalletContext);
+}
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID;
 
-export function Providers({ children }: { children: React.ReactNode }) {
+function PrivyBridge({ children }: { children: ReactNode }) {
+  const { ready, authenticated } = usePrivy();
+  const { login } = useLogin();
+  const { logout } = useLogout();
+  const { wallets } = useWallets();
+  const address = wallets[0]?.address;
+
+  const value: WalletState = {
+    enabled: true,
+    ready,
+    authenticated,
+    address,
+    login,
+    logout,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+  );
+}
+
+export function Providers({ children }: { children: ReactNode }) {
   if (!appId) {
-    throw new Error(
-      "NEXT_PUBLIC_PRIVY_APP_ID is not set. Copy .env.example to .env.local and fill it in.",
+    return (
+      <WalletContext.Provider
+        value={{
+          enabled: false,
+          ready: true,
+          authenticated: false,
+          login: () => {},
+          logout: () => {},
+        }}
+      >
+        {children}
+      </WalletContext.Provider>
     );
   }
 
   return (
     <PrivyProvider
       appId={appId}
-      {...(clientId ? { clientId } : {})}
       config={{
-        loginMethods: ["email", "google", "wallet", "passkey"],
         appearance: {
           theme: "dark",
-          landingHeader: "Sign in to Rill",
-          loginMessage:
-            "Describe an outcome. Let the agent economy deliver it.",
+          accentColor: "#F3BA2F",
+          logo: "/icon.svg",
         },
-        // Privy authenticates the user; it does not hold their authority. A Rill user acts
-        // through an Altana smart account with scoped session keys, provisioned by the backend's
-        // wallet module, so a second embedded wallet here would only be a decoy.
+        loginMethods: ["wallet"],
         embeddedWallets: {
-          ethereum: { createOnLogin: "off" },
+          ethereum: { createOnLogin: "all-users" },
         },
+        defaultChain: bsc,
       }}
     >
-      {children}
+      <PrivyBridge>{children}</PrivyBridge>
     </PrivyProvider>
   );
 }
