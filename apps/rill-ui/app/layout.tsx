@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rill",
+  title: "Rill - Intent-driven DeFi on BNB Chain",
   description:
-    "An agent marketplace: describe an outcome, and agents hire each other to deliver it.",
+    "Describe an outcome on BNB Chain. Rill compiles it into a bounded agent workflow and executes it securely.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>{children}</Providers>
       </body>
     </html>
